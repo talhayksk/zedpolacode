@@ -37,7 +37,7 @@ jobs:
       - name: Verify manifest and artifact
         run: |
           test -f extension.toml
-          grep -q '^id = "polacode"' extension.toml
+          grep -q '^id = "zpolacode"' extension.toml
           test -f target/wasm32-wasip2/release/zedpolacode.wasm
 
       - name: Upload wasm

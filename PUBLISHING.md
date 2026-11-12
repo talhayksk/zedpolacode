@@ -27,13 +27,13 @@ unpublished extension in Zed.
 | Prerequisite (docs) | Status here | Notes |
 | --- | --- | --- |
 | Slash command extensions accepted | ❌ | Deprecated; submissions rejected. |
-| ID unique, kebab-cased, no `zed`/`extension` words | ✅ | `id = "polacode"` in `extension.toml`. The repo/crate stay `zedpolacode`, only the registry ID must be neutral. |
+| ID unique, kebab-cased, no `zed`/`extension` words | ✅ | `id = "zpolacode"` in `extension.toml`. It does not contain the word `zed`, and the ID is free in the registry (1590 entries checked). The repo and crate stay `zedpolacode`. |
 | All user-facing text in English | ✅ | Assistant output, `--help`, errors and descriptors are English. |
 | Allowed license | ✅ | MIT. |
 | Test at the exact submodule commit | ✅ | `cargo test` + a manual run in Zed before tagging. |
 | Do not read/modify outside the environment Zed designates | ⚠️ | Writing the PNG needs a host process (Node + headless browser), because the WASI sandbox only allows writes into the extension work dir. This is exactly the kind of workaround the docs say is only accepted "at the maintainers' discretion". |
 | Do not misuse the extension API to work around limitations | ⚠️ | Same as above. |
-| Publish functionality not already in the registry | ✅ | No `polacode` entry in `extensions.toml`. |
+| Publish functionality not already in the registry | ✅ | No `zpolacode` entry in `extensions.toml`. |
 
 ## If you want registry distribution anyway
 
@@ -51,7 +51,9 @@ be downloaded or found in the environment). That would mean:
    as well, since MCP *extensions* are themselves being deprecated in favour of
    the registry.
 3. Keep a thin extension (`id = "polacode-mcp-server"`) that only locates or
-   downloads that server.
+   downloads that server. Note that MCP extensions have their own ID rule
+   (prefix `mcp-server-` or suffix `-mcp-server`), so this ID will not be
+   `zpolacode`.
 
 Note the prerequisite: *"Only provide one MCP server and nothing else."* The
 slash command would have to go.
@@ -75,9 +77,9 @@ ever restructured into one:
    ```
 3. Add the entry to `extensions.toml`:
    ```toml
-   [polacode]
+   [zpolacode]
    submodule = "extensions/zedpolacode"
-   version = "0.1.1"
+   version = "0.1.3"
    ```
 4. Commit, push, and open a PR against `zed-industries/extensions`.
 5. CI in that repository validates the manifest, the license, and that the

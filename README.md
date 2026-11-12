@@ -14,9 +14,9 @@ rendered from).
 ```
 
 > **Naming:** the project, repository and Rust crate are **Zed Polacode**
-> (`zedpolacode`), and the slash command is `/zedpolacode`. Its registry ID is
-> `polacode` — extension IDs may not contain the word `zed`. See
-> [PUBLISHING.md](PUBLISHING.md).
+> (`zedpolacode`), and the slash command is `/zedpolacode`. The registry ID is
+> `zpolacode` — extension IDs may not contain the word `zed`, so the `d` is
+> dropped. See [PUBLISHING.md](PUBLISHING.md).
 
 > **Distribution status:** install this as a **dev extension**. It is not on the
 > Zed extension registry — Zed no longer accepts slash-command extensions in the

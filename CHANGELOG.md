@@ -2,8 +2,10 @@
 
 This project follows [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.1.3 — 2026-11-12
 
+- Registry ID is now `zpolacode`: the rule forbids the *word* `zed`, not the
+  letter `z`, so the product name survives in a compliant form.
 - Split the engine into a `polacode-core` crate (`crates/core`): highlighting,
   themes, card rendering and a front-end agnostic `CardOptions`. The Zed
   extension is now a thin wrapper around it, which is the first step towards
