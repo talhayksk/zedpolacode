@@ -176,13 +176,28 @@ fn describe_error(code: &str, stderr: &str) -> String {
 }
 
 fn host_work_dir() -> Option<String> {
-    let pwd = std::env::var("PWD").ok()?;
-    let trimmed = pwd.trim().trim_end_matches(['/', '\\']).to_string();
-    if trimmed.is_empty() || trimmed == "/" || trimmed == "." {
-        None
-    } else {
-        Some(trimmed)
+    // Zed sets PWD to the host path of the extension work dir (the same path it
+    // preopens for us). The docs warn that `std::env::var` is not reliable in
+    // extensions, so fall back to the current directory when it is missing.
+    if let Ok(pwd) = std::env::var("PWD") {
+        if let Some(dir) = usable_dir(&pwd) {
+            return Some(dir);
+        }
     }
+    if let Ok(cwd) = std::env::current_dir() {
+        if let Some(dir) = usable_dir(&cwd.to_string_lossy()) {
+            return Some(dir);
+        }
+    }
+    None
+}
+
+fn usable_dir(value: &str) -> Option<String> {
+    let trimmed = value.trim().trim_end_matches(['/', '\\']);
+    if trimmed.is_empty() || trimmed == "." || trimmed == "\\" {
+        return None;
+    }
+    Some(trimmed.to_string())
 }
 
 pub(crate) fn is_absolute(path: &str) -> bool {
@@ -272,6 +287,15 @@ mod tests {
         assert!(is_absolute("D:/projeler"));
         assert!(!is_absolute(".polacode"));
         assert!(!is_absolute("shot.png"));
+    }
+
+    #[test]
+    fn rejects_unusable_work_dirs() {
+        assert_eq!(usable_dir("  /tmp/work/  ").as_deref(), Some("/tmp/work"));
+        assert_eq!(usable_dir("D:\\work\\").as_deref(), Some("D:\\work"));
+        assert_eq!(usable_dir(""), None);
+        assert_eq!(usable_dir("/"), None);
+        assert_eq!(usable_dir("."), None);
     }
 
     #[test]

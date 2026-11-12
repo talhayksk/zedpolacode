@@ -188,6 +188,14 @@ Try a different look:
 ZEDPOLACODE_PREVIEW_ARGS="--theme nord --bg gradient" cargo test write_preview_artifact -- --ignored --nocapture
 ```
 
+### Troubleshooting
+
+- Nothing happens? Open the log with `zed: open log`.
+- Need verbose output (including `println!`/`dbg!` from the extension)? Quit Zed and
+  relaunch it from a terminal with `zed --foreground`.
+- After installing the extension again, run `zed: install dev extension` on the
+  same directory — Zed replaces the previous build.
+
 ---
 
 ## Contributing
