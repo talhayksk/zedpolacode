@@ -1,7 +1,10 @@
 //! Command line parsing for `/zedpolacode`.
 
-use crate::highlight;
-use crate::theme;
+use polacode_core::options::valid_background;
+use polacode_core::CardOptions;
+use polacode_core::{highlight, theme};
+
+pub use polacode_core::options::BG_PRESETS;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Format {
@@ -19,18 +22,6 @@ impl Format {
         matches!(self, Format::Html | Format::Both)
     }
 }
-
-pub const BG_PRESETS: &[&str] = &[
-    "transparent",
-    "dark",
-    "light",
-    "gradient",
-    "sunset",
-    "ocean",
-    "aurora",
-    "midnight",
-    "mono",
-];
 
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -162,18 +153,20 @@ fn parse_lines(raw: &str) -> Result<(u32, u32), String> {
     }
 }
 
-fn valid_background(value: &str) -> bool {
-    if BG_PRESETS.contains(&value) {
-        return true;
-    }
-    let trimmed = value.trim();
-    if let Some(hex) = trimmed.strip_prefix('#') {
-        return matches!(hex.len(), 3 | 4 | 6 | 8) && hex.chars().all(|ch| ch.is_ascii_hexdigit());
-    }
-    false
-}
-
 impl Options {
+    /// The subset of options the renderer cares about.
+    pub fn card(&self) -> CardOptions {
+        CardOptions {
+            font_size: self.font_size,
+            padding: self.padding,
+            radius: self.radius,
+            line_numbers: self.line_numbers,
+            window: self.window,
+            shadow: self.shadow,
+            bg: self.bg.clone(),
+        }
+    }
+
     pub fn parse(args: &[String]) -> Result<Self, String> {
         let mut options = Options::default();
         let mut positional: Vec<String> = Vec::new();

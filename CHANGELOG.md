@@ -2,6 +2,13 @@
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+- Split the engine into a `polacode-core` crate (`crates/core`): highlighting,
+  themes, card rendering and a front-end agnostic `CardOptions`. The Zed
+  extension is now a thin wrapper around it, which is the first step towards
+  sharing the same engine with an MCP server.
+
 ## 0.1.2 — 2026-11-12
 
 - The slash command is now `/zedpolacode`, matching the product name.

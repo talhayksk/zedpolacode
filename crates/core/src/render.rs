@@ -4,7 +4,7 @@
 use std::fmt::Write as _;
 
 use crate::highlight::{Kind, Token};
-use crate::options::Options;
+use crate::options::CardOptions;
 use crate::theme::Theme;
 
 const MONO: &str = "\"JetBrains Mono\",\"Cascadia Mono\",\"Cascadia Code\",\"Fira Code\",Menlo,Consolas,\"DejaVu Sans Mono\",monospace";
@@ -28,7 +28,7 @@ pub struct Rendered {
     pub scale: u32,
 }
 
-pub fn render(lines: &[Vec<Token>], options: &Options, theme: &Theme, meta: &Meta) -> Rendered {
+pub fn render(lines: &[Vec<Token>], options: &CardOptions, theme: &Theme, meta: &Meta) -> Rendered {
     let font_size = options.font_size as f32;
     let char_w = font_size * CHAR_RATIO;
     let line_height = (font_size * 1.6).round().max(font_size + 4.0) as u32;
@@ -260,8 +260,8 @@ mod tests {
     use super::*;
     use crate::highlight::{language_for, tokenize};
 
-    fn options() -> Options {
-        Options::default()
+    fn options() -> CardOptions {
+        CardOptions::default()
     }
 
     #[test]

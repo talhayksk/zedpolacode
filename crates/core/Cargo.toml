@@ -1,0 +1,9 @@
+[package]
+name = "polacode-core"
+version = "0.1.0"
+edition = "2021"
+description = "Highlighting, theming and HTML card rendering for Zed Polacode"
+license = "MIT"
+repository = "https://github.com/talhayksk/zedpolacode"
+
+[dependencies]

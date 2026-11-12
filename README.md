@@ -160,14 +160,18 @@ flowchart TD
 | Path | Contents |
 | --- | --- |
 | `src/lib.rs` | Slash command, argument flow, dedent, summary, completions |
-| `src/highlight.rs` | Dependency-free tokenizer + language definitions |
-| `src/theme.rs` | Color palettes |
-| `src/render.rs` | HTML card generation and canvas measurement |
+| `src/options.rs` | Slash-command flag parsing (builds `CardOptions`) |
 | `src/host.rs` | Node invocation, path/warning translation |
 | `src/zedpolacode.js` | Host side: file writes, browser discovery, `--screenshot` |
+| `crates/core/src/highlight.rs` | Dependency-free tokenizer + language definitions |
+| `crates/core/src/theme.rs` | Color palettes |
+| `crates/core/src/render.rs` | HTML card generation and canvas measurement |
+| `crates/core/src/options.rs` | `CardOptions`, background presets and validation |
 
-Unit tests live in `#[cfg(test)]` blocks; `write_preview_artifact` is an
-`#[ignore]`d test that writes a card to disk for manual inspection.
+The engine lives in `crates/core` (`polacode-core`) and has no dependency on
+`zed_extension_api`, so the same code can drive an MCP server. Unit tests live in
+`#[cfg(test)]` blocks; `write_preview_artifact` is an `#[ignore]`d test that
+writes a card to disk for manual inspection.
 
 ---
 
@@ -175,7 +179,7 @@ Unit tests live in `#[cfg(test)]` blocks; `write_preview_artifact` is an
 
 ```bash
 cargo fmt --check
-cargo test
+cargo test --workspace
 cargo build --release --target wasm32-wasip2
 ```
 

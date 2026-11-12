@@ -4,11 +4,10 @@
 //! as a slash command: `/zedpolacode <file> --lines 12-40` renders a code card
 //! (PNG + HTML) into `.zedpolacode/`.
 
-mod highlight;
 mod host;
 mod options;
-mod render;
-mod theme;
+
+use polacode_core::{highlight, render, theme};
 
 use std::fmt::Write as _;
 
@@ -90,7 +89,7 @@ fn run(args: &[String], worktree: Option<&Worktree>) -> Result<SlashCommandOutpu
 
     let rendered = render::render(
         &lines,
-        &options,
+        &options.card(),
         theme,
         &render::Meta {
             title: &title,
@@ -509,7 +508,7 @@ mod tests {
         let lines = highlight::tokenize(code, highlight::language_for(Some("rust"), "snippet"));
         let rendered = render::render(
             &lines,
-            &options,
+            &options.card(),
             theme,
             &render::Meta {
                 title: "zedpolacode/src/lib.rs",

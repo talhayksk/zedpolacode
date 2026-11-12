@@ -1,3 +1,8 @@
+[workspace]
+members = [".", "crates/core"]
+default-members = ["."]
+resolver = "2"
+
 [package]
 name = "zedpolacode"
 version = "0.1.2"
@@ -10,6 +15,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 zed_extension_api = "0.7.0"
+polacode-core = { path = "crates/core" }
 
 [profile.release]
 opt-level = "s"

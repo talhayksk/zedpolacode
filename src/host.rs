@@ -7,8 +7,9 @@
 
 use zed_extension_api::{self as zed, process::Command, Worktree};
 
+use polacode_core::render::Rendered;
+
 use crate::options::Options;
-use crate::render::Rendered;
 
 const NODE_SCRIPT: &str = include_str!("zedpolacode.js");
 
