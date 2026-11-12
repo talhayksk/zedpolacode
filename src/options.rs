@@ -343,42 +343,42 @@ fn short(value: &str) -> String {
 pub fn help() -> String {
     format!(
         "\
-**Zed Polacode** — kodu paylaşılabilir bir görsele çevirir.
+**Zed Polacode** — turn code into a shareable image.
 
 ```text
-/polacode <dosya> [--lines 12-40] [seçenekler]
-/polacode [seçenekler] ```lang <kod> ```
+/polacode <file> [--lines 12-40] [options]
+/polacode [options] ```lang <code> ```
 ```
 
-**Kullanım**
+**Examples**
 
-- `/polacode src/main.rs --lines 40-70` → dosyanın 40-70. satırları
-- `/polacode src/store.rs` → dosyanın tamamı
+- `/polacode src/main.rs --lines 40-70` → lines 40-70 of the file
+- `/polacode src/store.rs` → the whole file
 - `/polacode --lines 12-30 --theme nord --bg gradient src/app.tsx`
 
-**Seçenekler**
+**Options**
 
-| Seçenek | Açıklama |
+| Option | Description |
 | --- | --- |
-| `--lines <a-b>` | Satır aralığı (`40-70`, `40:70`, `40..70`, `40-`) |
-| `--lang <id>` | Dili zorla (`rust`, `py`, `ts`, ...) |
-| `--theme <id>` | Renk teması: {} |
-| `--bg <ad\\|#hex>` | Arka plan: {} |
-| `--title <metin>` | Başlık çubuğundaki yazı |
-| `--font-size <px>` | Yazı boyutu (varsayılan 15) |
-| `--padding <px>` | İç boşluk (varsayılan 34) |
-| `--radius <px>` | Köşe yuvarlaklığı (varsayılan 14) |
-| `--no-line-numbers` | Satır numaralarını gizle |
-| `--no-window` | Başlık çubuğunu/noktaları gizle |
-| `--no-shadow` | Gölgeyi kapat |
-| `--out <klasör>` | Çıktı klasörü (varsayılan `.polacode`) |
-| `--format <png\\|html\\|both>` | Çıktı biçimi (varsayılan `png`) |
+| `--lines <a-b>` | Line range (`40-70`, `40:70`, `40..70`, `40-` for \"to the end\") |
+| `--lang <id>` | Force the language (`rust`, `py`, `ts`, ...) |
+| `--theme <id>` | Color theme: {} |
+| `--bg <name\\|#hex>` | Background: {} |
+| `--title <text>` | Text shown in the title bar |
+| `--font-size <px>` | Font size (default 15) |
+| `--padding <px>` | Inner padding (default 34) |
+| `--radius <px>` | Corner radius (default 14) |
+| `--no-line-numbers` | Hide line numbers |
+| `--no-window` | Hide the title bar and window dots |
+| `--no-shadow` | Turn the drop shadow off |
+| `--out <dir>` | Output folder (default `.polacode`) |
+| `--format <png\\|html\\|both>` | Output format (default `png`) |
 
-**Diller:** {}
+**Languages:** {}
 
-PNG üretimi için sistemde Chrome, Edge, Chromium veya Brave gerekir. Bulunamazsa
-HTML kart yine yazılır; tarayıcıda açıp ekran görüntüsü alabilirsin.
-`ZEDPOLACODE_BROWSER` ortam değişkeniyle tarayıcı yolunu elle verebilirsin.",
+Rendering a PNG needs Chrome, Edge, Chromium or Brave on your system. Without one the
+HTML card is still written — open it in a browser and take a screenshot. Point
+`ZEDPOLACODE_BROWSER` at a browser binary to pick one explicitly.",
         theme::id_list(),
         BG_PRESETS.join(", "),
         highlight::id_list()

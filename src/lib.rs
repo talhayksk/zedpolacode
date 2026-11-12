@@ -302,10 +302,10 @@ fn summary(
     let mut text = String::new();
     let _ = writeln!(
         text,
-        "**Zed Polacode** · {} satır · `{}` · `{}`",
+        "**Zed Polacode** · {} lines · `{}` · `{}`",
         rendered.lines, language, theme
     );
-    let _ = writeln!(text, "Başlık: `{}`\n", title);
+    let _ = writeln!(text, "Title: `{}`\n", title);
 
     let mut files = Vec::new();
     if options.format.wants_png() {
@@ -316,7 +316,7 @@ fn summary(
                 rendered.height * rendered.scale,
                 rendered.scale
             )),
-            None => files.push("- PNG üretilmedi".to_string()),
+            None => files.push("- PNG not produced".to_string()),
         }
     }
     if options.format.wants_html() || outcome.display_png.is_none() {
@@ -331,21 +331,21 @@ fn summary(
         if warning.contains("no-browser") {
             let _ = writeln!(
                 text,
-                "\n> PNG üretilemedi: sistemde Chrome, Edge, Chromium veya Brave bulunamadı. HTML kart hazır; tarayıcıda açıp ekran görüntüsü alabilirsin. Tarayıcı yolunu `ZEDPOLACODE_BROWSER` ortam değişkeniyle elle de verebilirsin."
+                "\n> No PNG: Chrome, Edge, Chromium and Brave were all missing. The HTML card is ready — open it in a browser to grab a screenshot, or point `ZEDPOLACODE_BROWSER` at a browser binary."
             );
         } else if warning.contains("png-missing") {
             let _ = writeln!(
                 text,
-                "\n> PNG üretilemedi, HTML kart yazıldı. Ayrıntı için tekrar dene ya da `--format html` kullan."
+                "\n> No PNG was produced; the HTML card was written. Try again, or use `--format html`."
             );
         } else {
-            let _ = writeln!(text, "\n> Uyarı: {warning}");
+            let _ = writeln!(text, "\n> Warning: {warning}");
         }
     }
 
     let _ = writeln!(
         text,
-        "\nTema/arka plan denemek için: `--theme nord`, `--bg gradient`, `--font-size 17`."
+        "\nTry other looks: `--theme nord`, `--bg gradient`, `--font-size 17`."
     );
 
     text
@@ -359,20 +359,20 @@ fn text_output(text: String) -> SlashCommandOutput {
 }
 
 const FLAGS: &[(&str, &str)] = &[
-    ("--lines", "satır aralığı, ör. 12-40"),
-    ("--theme", "renk teması"),
-    ("--bg", "arka plan"),
-    ("--lang", "dili zorla"),
-    ("--title", "başlık"),
-    ("--font-size", "yazı boyutu"),
-    ("--padding", "iç boşluk"),
-    ("--radius", "köşe yuvarlaklığı"),
+    ("--lines", "line range, e.g. 12-40"),
+    ("--theme", "color theme"),
+    ("--bg", "background"),
+    ("--lang", "force the language"),
+    ("--title", "title text"),
+    ("--font-size", "font size"),
+    ("--padding", "inner padding"),
+    ("--radius", "corner radius"),
     ("--format", "png | html | both"),
-    ("--out", "çıktı klasörü"),
-    ("--no-line-numbers", "satır numaralarını gizle"),
-    ("--no-window", "başlık çubuğunu gizle"),
-    ("--no-shadow", "gölgeyi kapat"),
-    ("--help", "tüm seçenekler"),
+    ("--out", "output folder"),
+    ("--no-line-numbers", "hide line numbers"),
+    ("--no-window", "hide the title bar"),
+    ("--no-shadow", "turn the shadow off"),
+    ("--help", "all options"),
 ];
 
 fn complete(args: &[String]) -> Vec<SlashCommandArgumentCompletion> {

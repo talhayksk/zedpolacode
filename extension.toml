@@ -1,6 +1,6 @@
-id = "zedpolacode"
+id = "polacode"
 name = "Zed Polacode"
-version = "0.1.0"
+version = "0.1.1"
 schema_version = 1
 authors = ["Talha Yüksek <talha.yuksek@hotmail.com>"]
 description = "Polacode-style code snapshots: render a file or line range as a shareable PNG/HTML code card."

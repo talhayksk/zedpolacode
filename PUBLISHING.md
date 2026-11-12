@@ -1,81 +1,101 @@
-# Yayınlama
+# Publishing notes
 
-Bu belge, Zed Polacode'u Zed eklenti mağazasına gönderme adımlarını anlatır.
+Everything below is based on the official Zed docs:
 
-## 0. Ön koşullar
+- [Developing Extensions](https://zed.dev/docs/extensions/developing-extensions)
+- [Extension Publishing Prerequisites](https://zed.dev/docs/extensions/publishing/prerequisites)
+- [Publishing guide](https://zed.dev/docs/extensions/publishing/publishing-guide)
 
-- Depo public olmalı: <https://github.com/talhayksk/zedpolacode>
-- `extension.toml` içindeki `id` tekil olmalı (`zedpolacode`).
-- `version` üç yerde aynı olmalı: `extension.toml`, `Cargo.toml`, `CHANGELOG.md`.
+## TL;DR
 
-## 1. Sürüm çıkar
+**A slash-command-only extension cannot be submitted to the Zed extension
+registry today.** The prerequisites page states:
 
-```bash
-# sürüm numaralarını güncelle, sonra:
-git commit -am "Bump version to 0.1.0"
-git tag -a v0.1.0 -m "Zed Polacode 0.1.0"
-git push origin main --tags
-```
+> ### Agent Server and Slash Command Extensions
+>
+> Agent server and slash command extensions have been deprecated and submissions
+> will no longer be accepted. If you intend on making an agent server available
+> within Zed, publish it to the [ACP Registry](https://agentclientprotocol.com/registry)
+> instead.
 
-CI yeşil olmalı ve `zedpolacode.wasm` artifact'ı üretilmeli.
+So this project is distributed as a **dev extension** (clone the repo, run
+`zed: install dev extension`). That is a supported, documented way to use an
+unpublished extension in Zed.
 
-## 2. Zed mağaza kaydı (PR)
+## How the published rules map to this extension
 
-Zed mağazası, [zed-industries/extensions](https://github.com/zed-industries/extensions)
-deposundaki bir **alt modül** listesiyle çalışır. Süreç:
+| Prerequisite (docs) | Status here | Notes |
+| --- | --- | --- |
+| Slash command extensions accepted | ❌ | Deprecated; submissions rejected. |
+| ID unique, kebab-cased, no `zed`/`extension` words | ✅ | `id = "polacode"` in `extension.toml`. The repo/crate stay `zedpolacode`, only the registry ID must be neutral. |
+| All user-facing text in English | ✅ | Assistant output, `--help`, errors and descriptors are English. |
+| Allowed license | ✅ | MIT. |
+| Test at the exact submodule commit | ✅ | `cargo test` + a manual run in Zed before tagging. |
+| Do not read/modify outside the environment Zed designates | ⚠️ | Writing the PNG needs a host process (Node + headless browser), because the WASI sandbox only allows writes into the extension work dir. This is exactly the kind of workaround the docs say is only accepted "at the maintainers' discretion". |
+| Do not misuse the extension API to work around limitations | ⚠️ | Same as above. |
+| Publish functionality not already in the registry | ✅ | No `polacode` entry in `extensions.toml`. |
 
-1. `zed-industries/extensions` deposunu fork'la.
-2. Fork'u klonla ve alt modülü ekle:
+## If you want registry distribution anyway
 
+Two realistic routes, both bigger than "change the ID":
+
+### 1. Pivot to an MCP server extension
+
+The docs still accept MCP server extensions (with `mcp-server-` prefix or
+`-mcp-server` suffix, one server per extension, server **not** bundled — it must
+be downloaded or found in the environment). That would mean:
+
+1. Move the card renderer (highlight + HTML + headless screenshot) into a
+   standalone Node/Python MCP server published on npm/PyPI.
+2. Publish it to the [MCP registry](https://registry.modelcontextprotocol.io/)
+   as well, since MCP *extensions* are themselves being deprecated in favour of
+   the registry.
+3. Keep a thin extension (`id = "polacode-mcp-server"`) that only locates or
+   downloads that server.
+
+Note the prerequisite: *"Only provide one MCP server and nothing else."* The
+slash command would have to go.
+
+### 2. Ship it as an MCP server only
+
+Skip Zed extensions entirely and publish the snapshot tool as an MCP server
+(configurable in Zed through `context_servers`). Same code, no registry review.
+
+Both options keep the current rendering engine; only the entry point changes.
+
+## Registry submission steps (kept for reference)
+
+These steps apply to any *accepted* extension category, in case this project is
+ever restructured into one:
+
+1. Fork [zed-industries/extensions](https://github.com/zed-industries/extensions).
+2. Clone your fork and add the submodule:
    ```bash
-   git clone https://github.com/<kullanici>/extensions.git
-   cd extensions
    git submodule add https://github.com/talhayksk/zedpolacode.git extensions/zedpolacode
    ```
-
-3. `extensions.toml` dosyasına kaydı ekle:
-
+3. Add the entry to `extensions.toml`:
    ```toml
-   [zedpolacode]
+   [polacode]
    submodule = "extensions/zedpolacode"
-   version = "0.1.0"
+   version = "0.1.1"
    ```
+4. Commit, push, and open a PR against `zed-industries/extensions`.
+5. CI in that repository validates the manifest, the license, and that the
+   extension builds for `wasm32-wasip2`.
 
-4. Değişiklikleri commit'le ve `zed-industries/extensions` deposuna PR aç.
-   PR şablonundaki kontroller (manifest doğrulama, wasm derleme, isim
-   çakışması) otomatik çalışır.
+### Releasing a new version
 
-> Aynı `id` ile başka bir eklenti varsa PR reddedilir. `zedpolacode` şu an
-> boş görünüyor, ama göndermeden önce
-> <https://github.com/zed-industries/extensions/blob/main/extensions.toml>
-> içinde tekrar kontrol et.
+1. Bump `version` in `extension.toml`, `Cargo.toml` and `CHANGELOG.md`.
+2. `git tag -a vX.Y.Z -m "..."` and `git push --tags`.
+3. Update the submodule commit and `version` in the registry fork, then open a PR.
 
-## 3. Yeni sürüm yayınlama
+## Pre-release checklist
 
-Zed, eklentileri alt modülün **tag**'inden okur. Yeni sürüm için:
-
-1. Sürümü artır (`extension.toml` + `Cargo.toml` + `CHANGELOG.md`).
-2. `git tag -a vX.Y.Z -m "..."` ve `git push --tags`.
-3. `zed-industries/extensions` fork'unda alt modülü güncelle:
-
-   ```bash
-   cd extensions/zedpolacode
-   git fetch --tags
-   git checkout vX.Y.Z
-   cd ../..
-   git add extensions/zedpolacode
-   git commit -m "Update zedpolacode to vX.Y.Z"
-   ```
-
-4. `extensions.toml` içindeki `version` alanını güncelle ve PR aç.
-
-## 4. Kontrol listesi (göndermeden önce)
-
-- [ ] `cargo fmt --check` temiz
-- [ ] `cargo test` yeşil
-- [ ] `cargo build --release --target wasm32-wasip1` başarılı
-- [ ] `extension.toml` içinde `id`, `name`, `version`, `schema_version`,
-      `authors`, `description`, `repository` dolu
-- [ ] README'de kurulum ve kullanım anlaşılır
-- [ ] `LICENSE` var
-- [ ] PNG çıktısı gerçekten üretiliyor (Chrome/Edge kurulu bir makinede elle dene)
+- [ ] `cargo fmt --check` clean
+- [ ] `cargo test` green
+- [ ] `cargo build --release --target wasm32-wasip2` succeeds
+- [ ] `extension.toml` has `id`, `name`, `version`, `schema_version`, `authors`,
+      `description`, `repository`
+- [ ] README explains install and usage
+- [ ] `LICENSE` present
+- [ ] PNG output verified by hand in Zed (Chrome/Edge installed)

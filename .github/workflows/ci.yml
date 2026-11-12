@@ -21,7 +21,8 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-wasip1
+          # Zed compiles extensions with the WASI preview 2 target.
+          targets: wasm32-wasip2
           components: rustfmt
 
       - name: Check formatting
@@ -31,17 +32,17 @@ jobs:
         run: cargo test
 
       - name: Build extension
-        run: cargo build --release --target wasm32-wasip1
+        run: cargo build --release --target wasm32-wasip2
 
       - name: Verify manifest and artifact
         run: |
           test -f extension.toml
-          grep -q '^id = "zedpolacode"' extension.toml
-          test -f target/wasm32-wasip1/release/zedpolacode.wasm
+          grep -q '^id = "polacode"' extension.toml
+          test -f target/wasm32-wasip2/release/zedpolacode.wasm
 
       - name: Upload wasm
         uses: actions/upload-artifact@v4
         with:
           name: zedpolacode-wasm
-          path: target/wasm32-wasip1/release/zedpolacode.wasm
+          path: target/wasm32-wasip2/release/zedpolacode.wasm
           if-no-files-found: error

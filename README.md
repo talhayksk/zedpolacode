@@ -3,73 +3,72 @@
 [![CI](https://github.com/talhayksk/zedpolacode/actions/workflows/ci.yml/badge.svg)](https://github.com/talhayksk/zedpolacode/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-VS Code'daki **Polacode** eklentisinin Zed sürümü. Kodu şık bir "kod kartına"
-çevirir ve paylaşılabilir bir **PNG** (artı kaynak **HTML**) olarak projeye yazar.
+Polacode-style code snapshots for [Zed](https://zed.dev): turn a file or a line
+range into a shareable **PNG** code card (plus the standalone **HTML** it was
+rendered from).
 
-![Örnek çıktı](docs/preview.png)
+![Example output](docs/preview.png)
 
 ```
 /polacode src/main.rs --lines 120-160 --theme tokyo-night --bg gradient
 ```
 
+> **Distribution status:** install this as a **dev extension**. It is not on the
+> Zed extension registry — Zed no longer accepts slash-command extensions in the
+> registry, see [PUBLISHING.md](PUBLISHING.md) for the exact quotes and for the
+> alternatives.
+
 ---
 
-## Kurulum
+## Install
 
-### Zed mağazasından
-
-`zed: extensions` komut paletini aç → **Zed Polacode** ara → **Install**.
-(Mağaza kaydı onaylandıktan sonra geçerli; aşağıdaki iki yol her zaman çalışır.)
-
-### Geliştirici eklentisi olarak (hemen denenebilir)
+### As a dev extension (recommended)
 
 ```bash
 git clone https://github.com/talhayksk/zedpolacode.git
 ```
 
-Zed'de komut paleti → `zed: extensions` → **Install Dev Extension** → klonladığın
-klasörü seç. Zed eklentiyi `wasm32-wasip1` için kendisi derler.
+1. Open the command palette in Zed.
+2. Run `zed: install dev extension`.
+3. Select the cloned `zedpolacode` directory (the one with `extension.toml`).
 
-### Kaynaktan derleme
+Zed compiles the extension itself. Rust must be installed via [rustup](https://rust-lang.github.io/rustup/);
+Zed installs the `wasm32-wasip2` target for you.
+
+### From source / manual build
 
 ```bash
-rustup target add wasm32-wasip1
-cargo build --release --target wasm32-wasip1
-# -> target/wasm32-wasip1/release/zedpolacode.wasm
+rustup target add wasm32-wasip2
+cargo build --release --target wasm32-wasip2
+# -> target/wasm32-wasip2/release/zedpolacode.wasm
 ```
 
-### Gereksinimler
+### Requirements
 
-- Güncel Zed (extension API `0.7.0`).
-- PNG üretimi için sistemde **Chrome, Edge, Chromium veya Brave** bulunmalı.
-  Tarayıcı yoksa eklenti yine çalışır: HTML kart yazılır, PNG atlanır ve nedeni
-  asistan çıktısında söylenir. Farklı bir tarayıcı için `ZEDPOLACODE_BROWSER`
-  ortam değişkenine yolunu ver.
-
----
-
-## Neden slash komutu?
-
-Zed eklentileri iki şeyi yapamaz:
-
-1. **Arayüz çizemez** — kendi panelini/pencereciğini açamaz.
-2. **Kum havuzu dışına yazamaz** — WASI kum havuzu yalnızca eklentinin kendi
-   çalışma dizinine yazmaya izin verir.
-
-Bu yüzden özellik, Zed'in eklenti API'sinin izin verdiği tek etkileşim yüzeyini
-kullanıyor: **`/polacode` slash komutu**. Kartın HTML'i Rust içinde üretiliyor;
-dosyayı projeye yazma ve PNG'yi çekme işini host tarafında **Node** (Zed ile
-birlikte gelir) ve **headless tarayıcı** yapıyor.
-
-> Zed'in eklenti API'si editördeki *seçimi* eklentiye vermiyor. Bu yüzden satır
-> aralığını `--lines` ile veriyorsun. (Editörde `Ctrl+G` / `Cmd+G` satır
-> numaralarını gösterir.)
+- A recent Zed (extension API `0.7.x`).
+- **PNG rendering** needs Chrome, Edge, Chromium or Brave. Without one, the
+  command still works: it writes the HTML card and explains why there is no PNG.
+  Set `ZEDPOLACODE_BROWSER` to a browser binary to pick one explicitly.
+- Node is used to hand the card over to the host; Zed ships its own runtime.
 
 ---
 
-## Kullanım
+## Why a slash command?
 
-Assistant panelini aç ve komutu yaz:
+Zed extensions cannot draw UI, and the WASI sandbox they run in can only write to
+the extension's own directory. The slash command is the only interactive surface
+the extension API exposes, and the actual file writes are performed by a host
+process (Node + a headless browser) that the extension spawns.
+
+The extension API also does not expose the current editor selection, so the line
+range is passed explicitly with `--lines` (use `Ctrl+G` / `Cmd+G` in Zed to see
+line numbers).
+
+---
+
+## Usage
+
+Open the assistant panel and run:
 
 ```text
 /polacode src/store.rs --lines 40-70
@@ -77,7 +76,7 @@ Assistant panelini aç ve komutu yaz:
 /polacode --file crates/core/src/lib.rs --lines 1-25 --title "core/lib.rs"
 ```
 
-Kod bloğunu doğrudan da verebilirsin (proje açık olmasa bile çalışır):
+A code block works too, even without an open project:
 
 ```text
 /polacode ```rust
@@ -85,44 +84,43 @@ let snapshot = capture(&buffer);
 ```
 ```
 
-Çıktı `.polacode/` klasörüne yazılır:
+Output is written to `.polacode/` in the project:
 
 ```text
 .polacode/store-L40-70.png
 .polacode/store-L40-70.html
 ```
 
-`.polacode/` klasörünü kendi projelerinin `.gitignore`'una eklemen önerilir.
+Add `.polacode/` to your project's `.gitignore`.
 
 ---
 
-## Seçenekler
+## Options
 
-| Seçenek | Açıklama |
+| Option | Description |
 | --- | --- |
-| `--lines <a-b>` | Satır aralığı: `40-70`, `40:70`, `40..70`, `40-` (dosya sonuna kadar) |
-| `--lang <id>` | Dili zorla (dosya uzantısından otomatik de algılanır) |
-| `--theme <id>` | Renk teması |
-| `--bg <ad\|#hex>` | Arka plan: `transparent`, `gradient`, `sunset`, `ocean`, `aurora`, `midnight`, `mono`, `dark`, `light` ya da `#1e1e2e` gibi bir hex |
-| `--title <metin>` | Başlık çubuğundaki yazı (varsayılan: dosya adı) |
-| `--font-size <px>` | Yazı boyutu, 9-40 (varsayılan 15) |
-| `--padding <px>` | İç boşluk, 0-120 (varsayılan 34) |
-| `--radius <px>` | Köşe yuvarlaklığı, 0-48 (varsayılan 14) |
-| `--no-line-numbers` | Satır numaralarını gizle |
-| `--no-window` | Başlık çubuğunu ve trafik ışıklarını gizle |
-| `--no-shadow` | Gölgeyi kapat |
-| `--out <klasör>` | Çıktı klasörü (varsayılan `.polacode`, mutlak yol da olabilir) |
-| `--format <png\|html\|both>` | Çıktı biçimi (varsayılan `png`) |
+| `--lines <a-b>` | Line range: `40-70`, `40:70`, `40..70`, `40-` (to the end of file) |
+| `--lang <id>` | Force the language (also detected from the file extension) |
+| `--theme <id>` | Color theme |
+| `--bg <name\|#hex>` | Background: `transparent`, `gradient`, `sunset`, `ocean`, `aurora`, `midnight`, `mono`, `dark`, `light`, or a hex color such as `#1e1e2e` |
+| `--title <text>` | Title bar text (defaults to the file name) |
+| `--font-size <px>` | Font size, 9-40 (default 15) |
+| `--padding <px>` | Inner padding, 0-120 (default 34) |
+| `--radius <px>` | Corner radius, 0-48 (default 14) |
+| `--no-line-numbers` | Hide line numbers |
+| `--no-window` | Hide the title bar and window dots |
+| `--no-shadow` | Turn the drop shadow off |
+| `--out <dir>` | Output folder (default `.polacode`, may be absolute) |
+| `--format <png\|html\|both>` | Output format (default `png`) |
 
-`/polacode --help` her zaman güncel listeyi gösterir; parametreler için
-otomatik tamamlama da vardır.
+`/polacode --help` lists the current set; arguments also have completions.
 
-### Temalar
+### Themes
 
-`dracula` (varsayılan), `one-dark`, `nord`, `tokyo-night`, `github-dark`,
+`dracula` (default), `one-dark`, `nord`, `tokyo-night`, `github-dark`,
 `catppuccin-mocha`, `github-light`, `solarized-light`
 
-### Diller
+### Languages
 
 `rust`, `python`, `javascript`, `typescript`, `go`, `c`, `cpp`, `csharp`,
 `java`, `kotlin`, `swift`, `ruby`, `php`, `shell`, `sql`, `lua`, `zig`, `html`
@@ -130,64 +128,61 @@ otomatik tamamlama da vardır.
 
 ---
 
-## Nasıl çalışıyor (teknik)
+## How it works
 
 ```mermaid
 flowchart TD
     A["/polacode src/lib.rs --lines 10-30"] --> B["Zed: zedpolacode.wasm (WASI)"]
-    B --> C["Dosyayı oku, satırları kes, renklendir"]
-    C --> D["HTML kartı üret + tuval boyutunu hesapla"]
-    D --> E["Kartı eklenti çalışma dizinine yaz"]
-    E --> F["Node betiği (host): kopyala + headless tarayıcı"]
+    B --> C["Read file, slice lines, highlight"]
+    C --> D["Build the HTML card + measure the canvas"]
+    D --> E["Write the card into the extension work dir"]
+    E --> F["Node script (host): copy + headless browser"]
     F --> G[".polacode/lib-L10-30.png"]
     F --> H[".polacode/lib-L10-30.html"]
 ```
 
-- **Renklendirme**: bağımlılıksız küçük bir tarayıcı (`src/highlight.rs`).
-  Yorumlar, string'ler (üçlü/çok satırlı dahil), sayılar, anahtar kelimeler,
-  fonksiyon çağrıları, tipler, sabitler; ayrıca HTML, CSS, YAML, TOML ve JSON
-  için özel kurallar.
-- **Ölçü**: tuval genişliği en uzun satırdan hesaplanır (monospace oranı 0.62,
-  CJK genişliği 2 sütun). PNG 2x ölçekte çekilir (`@2x`), retina dostu.
-- **Şeffaflık**: `--bg transparent` (varsayılan) gerçek alfa kanalı üretir
-  (`--default-background-color=00000000`).
-- **Sağlamlık**: PNG üretilemezse komut hata vermez; HTML yazılır ve nedeni
-  asistan çıktısında açıklanır.
+- **Highlighting**: a dependency-free scanner (`src/highlight.rs`) for comments,
+  strings (including triple-quoted and multi-line), numbers, keywords, calls,
+  types and constants, plus dedicated rules for HTML, CSS, YAML, TOML and JSON.
+- **Measuring**: the canvas is sized from the longest line (0.62 monospace
+  advance ratio, CJK counts as two columns). PNGs are captured at `@2x`.
+- **Transparency**: `--bg transparent` (default) produces a real alpha channel.
+- **Resilience**: if the PNG cannot be rendered the command still succeeds with
+  the HTML card and explains why.
 
-### Proje yapısı
+### Project layout
 
-| Yol | İçerik |
+| Path | Contents |
 | --- | --- |
-| `src/lib.rs` | Slash komutu, argüman akışı, dedent, çıktı özeti, tamamlamalar |
-| `src/highlight.rs` | Bağımlılıksız tokenizer + dil tanımları |
-| `src/theme.rs` | Renk paletleri |
-| `src/render.rs` | HTML kart üretimi + tuval ölçüsü |
-| `src/host.rs` | Node çağrısı, yol/uyarı çevirisi |
-| `src/zedpolacode.js` | Host tarafı: dosya yazımı, tarayıcı keşfi, `--screenshot` |
+| `src/lib.rs` | Slash command, argument flow, dedent, summary, completions |
+| `src/highlight.rs` | Dependency-free tokenizer + language definitions |
+| `src/theme.rs` | Color palettes |
+| `src/render.rs` | HTML card generation and canvas measurement |
+| `src/host.rs` | Node invocation, path/warning translation |
+| `src/zedpolacode.js` | Host side: file writes, browser discovery, `--screenshot` |
 
-Birim testleri modüllerin `#[cfg(test)]` bloklarında yaşıyor; ayrıca
-`write_preview_artifact` isimli `#[ignore]`lu test elle görsel kontrol için
-kartı diske yazar.
+Unit tests live in `#[cfg(test)]` blocks; `write_preview_artifact` is an
+`#[ignore]`d test that writes a card to disk for manual inspection.
 
 ---
 
-## Geliştirme
+## Development
 
 ```bash
 cargo fmt --check
-cargo test                                  # 28 test
-cargo build --release --target wasm32-wasip1
+cargo test
+cargo build --release --target wasm32-wasip2
 ```
 
-Tarayıcı/Node hattını elle denemek için:
+To exercise the Node/browser path by hand:
 
 ```bash
 cargo test write_preview_artifact -- --ignored --nocapture
-# HTML=C:\...\Temp\zedpolacode-preview.html  W=811 H=606 SCALE=2
-node src/zedpolacode.js '{"mode":"file","html":"<yol>","outDir":"<klasör>","base":"preview","w":811,"h":606,"scale":2,"png":true,"wait":1200,"useTmp":false}'
+# HTML=/tmp/zedpolacode-preview.html  W=811 H=606 SCALE=2
+node src/zedpolacode.js '{"mode":"file","html":"<path>","outDir":"<dir>","base":"preview","w":811,"h":606,"scale":2,"png":true,"wait":1200,"useTmp":false}'
 ```
 
-Farklı bir görünüm denemek için:
+Try a different look:
 
 ```bash
 ZEDPOLACODE_PREVIEW_ARGS="--theme nord --bg gradient" cargo test write_preview_artifact -- --ignored --nocapture
@@ -195,15 +190,11 @@ ZEDPOLACODE_PREVIEW_ARGS="--theme nord --bg gradient" cargo test write_preview_a
 
 ---
 
-## Yayınlama
+## Contributing
 
-Zed mağazasına gönderme adımları: [PUBLISHING.md](PUBLISHING.md).
+Issues and PRs are welcome. For larger changes please open an issue first.
+`cargo fmt` and `cargo test` must be green.
 
-## Katkı
-
-Issue ve PR'lar açık. Büyük değişikliklerden önce bir issue açıp konuşalım.
-Kod tarafında `cargo fmt` + `cargo test` yeşil olmalı.
-
-## Lisans
+## License
 
 [MIT](LICENSE) © Talha Yüksek
