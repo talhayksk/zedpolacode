@@ -31,7 +31,7 @@ pub fn emit(
     let (out_dir, use_tmp) = match (root.as_deref(), options.out_dir.as_deref()) {
         (Some(_), Some(relative)) if is_absolute(relative) => (relative.to_string(), false),
         (Some(root), Some(relative)) => (join_path(root, relative), false),
-        (Some(root), None) => (join_path(root, ".polacode"), false),
+        (Some(root), None) => (join_path(root, ".zedpolacode"), false),
         (None, Some(absolute)) if is_absolute(absolute) => (absolute.to_string(), false),
         _ => (String::new(), true),
     };
@@ -285,7 +285,7 @@ mod tests {
         assert!(is_absolute("/tmp/x"));
         assert!(is_absolute("C:\\Users\\x"));
         assert!(is_absolute("D:/projeler"));
-        assert!(!is_absolute(".polacode"));
+        assert!(!is_absolute(".zedpolacode"));
         assert!(!is_absolute("shot.png"));
     }
 
@@ -301,15 +301,15 @@ mod tests {
     #[test]
     fn joins_and_displays_paths() {
         assert_eq!(
-            join_path("D:\\projeler\\app", ".polacode"),
-            "D:\\projeler\\app/.polacode"
+            join_path("D:\\projeler\\app", ".zedpolacode"),
+            "D:\\projeler\\app/.zedpolacode"
         );
         assert_eq!(
             display_path(
                 Some("D:\\projeler\\app"),
-                "D:\\projeler\\app/.polacode/a.png"
+                "D:\\projeler\\app/.zedpolacode/a.png"
             ),
-            ".polacode/a.png"
+            ".zedpolacode/a.png"
         );
         assert_eq!(display_path(None, "/tmp/a.png"), "/tmp/a.png");
     }

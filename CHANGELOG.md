@@ -2,6 +2,13 @@
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## 0.1.2 — 2026-11-12
+
+- The slash command is now `/zedpolacode`, matching the product name.
+- The default output folder is `.zedpolacode/` (previously `.polacode/`).
+- README rewritten around the Zed Polacode name, with a note that the registry
+  ID stays `polacode` because extension IDs may not contain `zed`.
+
 ## 0.1.1 — 2026-11-12
 
 Aligns the extension with the current Zed extension docs.

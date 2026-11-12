@@ -1,4 +1,4 @@
-//! Command line parsing for `/polacode`.
+//! Command line parsing for `/zedpolacode`.
 
 use crate::highlight;
 use crate::theme;
@@ -111,7 +111,7 @@ fn take_value(
     *index += 1;
     args.get(*index)
         .cloned()
-        .ok_or_else(|| format!("`{flag}` needs a value. See `/polacode --help`."))
+        .ok_or_else(|| format!("`{flag}` needs a value. See `/zedpolacode --help`."))
 }
 
 fn parse_number(flag: &str, raw: &str, min: u32, max: u32) -> Result<u32, String> {
@@ -266,8 +266,8 @@ impl Options {
                 "--numbers" => options.line_numbers = true,
                 other => {
                     return Err(format!(
-                        "Unknown option `{other}`. Run `/polacode --help` to see what is available."
-                    ))
+                    "Unknown option `{other}`. Run `/zedpolacode --help` to see what is available."
+                ))
                 }
             }
 
@@ -346,15 +346,15 @@ pub fn help() -> String {
 **Zed Polacode** — turn code into a shareable image.
 
 ```text
-/polacode <file> [--lines 12-40] [options]
-/polacode [options] ```lang <code> ```
+/zedpolacode <file> [--lines 12-40] [options]
+/zedpolacode [options] ```lang <code> ```
 ```
 
 **Examples**
 
-- `/polacode src/main.rs --lines 40-70` → lines 40-70 of the file
-- `/polacode src/store.rs` → the whole file
-- `/polacode --lines 12-30 --theme nord --bg gradient src/app.tsx`
+- `/zedpolacode src/main.rs --lines 40-70` → lines 40-70 of the file
+- `/zedpolacode src/store.rs` → the whole file
+- `/zedpolacode --lines 12-30 --theme nord --bg gradient src/app.tsx`
 
 **Options**
 
@@ -371,7 +371,7 @@ pub fn help() -> String {
 | `--no-line-numbers` | Hide line numbers |
 | `--no-window` | Hide the title bar and window dots |
 | `--no-shadow` | Turn the drop shadow off |
-| `--out <dir>` | Output folder (default `.polacode`) |
+| `--out <dir>` | Output folder (default `.zedpolacode`) |
 | `--format <png\\|html\\|both>` | Output format (default `png`) |
 
 **Languages:** {}

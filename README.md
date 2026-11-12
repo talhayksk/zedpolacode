@@ -9,9 +9,14 @@ rendered from).
 
 ![Example output](docs/preview.png)
 
+```text
+/zedpolacode src/main.rs --lines 120-160 --theme tokyo-night --bg gradient
 ```
-/polacode src/main.rs --lines 120-160 --theme tokyo-night --bg gradient
-```
+
+> **Naming:** the project, repository and Rust crate are **Zed Polacode**
+> (`zedpolacode`), and the slash command is `/zedpolacode`. Its registry ID is
+> `polacode` — extension IDs may not contain the word `zed`. See
+> [PUBLISHING.md](PUBLISHING.md).
 
 > **Distribution status:** install this as a **dev extension**. It is not on the
 > Zed extension registry — Zed no longer accepts slash-command extensions in the
@@ -71,27 +76,27 @@ line numbers).
 Open the assistant panel and run:
 
 ```text
-/polacode src/store.rs --lines 40-70
-/polacode src/App.tsx --theme nord --bg gradient
-/polacode --file crates/core/src/lib.rs --lines 1-25 --title "core/lib.rs"
+/zedpolacode src/store.rs --lines 40-70
+/zedpolacode src/App.tsx --theme nord --bg gradient
+/zedpolacode --file crates/core/src/lib.rs --lines 1-25 --title "core/lib.rs"
 ```
 
 A code block works too, even without an open project:
 
 ```text
-/polacode ```rust
+/zedpolacode ```rust
 let snapshot = capture(&buffer);
 ```
 ```
 
-Output is written to `.polacode/` in the project:
+Output is written to `.zedpolacode/` in the project:
 
 ```text
-.polacode/store-L40-70.png
-.polacode/store-L40-70.html
+.zedpolacode/store-L40-70.png
+.zedpolacode/store-L40-70.html
 ```
 
-Add `.polacode/` to your project's `.gitignore`.
+Add `.zedpolacode/` to your project's `.gitignore`.
 
 ---
 
@@ -110,10 +115,10 @@ Add `.polacode/` to your project's `.gitignore`.
 | `--no-line-numbers` | Hide line numbers |
 | `--no-window` | Hide the title bar and window dots |
 | `--no-shadow` | Turn the drop shadow off |
-| `--out <dir>` | Output folder (default `.polacode`, may be absolute) |
+| `--out <dir>` | Output folder (default `.zedpolacode`, may be absolute) |
 | `--format <png\|html\|both>` | Output format (default `png`) |
 
-`/polacode --help` lists the current set; arguments also have completions.
+`/zedpolacode --help` lists the current set; arguments also have completions.
 
 ### Themes
 
@@ -132,13 +137,13 @@ Add `.polacode/` to your project's `.gitignore`.
 
 ```mermaid
 flowchart TD
-    A["/polacode src/lib.rs --lines 10-30"] --> B["Zed: zedpolacode.wasm (WASI)"]
+    A["/zedpolacode src/lib.rs --lines 10-30"] --> B["Zed: zedpolacode.wasm (WASI)"]
     B --> C["Read file, slice lines, highlight"]
     C --> D["Build the HTML card + measure the canvas"]
     D --> E["Write the card into the extension work dir"]
     E --> F["Node script (host): copy + headless browser"]
-    F --> G[".polacode/lib-L10-30.png"]
-    F --> H[".polacode/lib-L10-30.html"]
+    F --> G[".zedpolacode/lib-L10-30.png"]
+    F --> H[".zedpolacode/lib-L10-30.html"]
 ```
 
 - **Highlighting**: a dependency-free scanner (`src/highlight.rs`) for comments,
@@ -193,8 +198,8 @@ ZEDPOLACODE_PREVIEW_ARGS="--theme nord --bg gradient" cargo test write_preview_a
 - Nothing happens? Open the log with `zed: open log`.
 - Need verbose output (including `println!`/`dbg!` from the extension)? Quit Zed and
   relaunch it from a terminal with `zed --foreground`.
-- After installing the extension again, run `zed: install dev extension` on the
-  same directory — Zed replaces the previous build.
+- Re-installing? Run `zed: install dev extension` on the same directory again —
+  Zed replaces the previous build.
 
 ---
 

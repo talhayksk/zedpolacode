@@ -1,8 +1,8 @@
 //! Zed Polacode.
 //!
 //! Zed extensions cannot open custom panels, so the snapshot feature is exposed
-//! as a slash command: `/polacode <file> --lines 12-40` renders a code card
-//! (PNG + HTML) into `.polacode/`.
+//! as a slash command: `/zedpolacode <file> --lines 12-40` renders a code card
+//! (PNG + HTML) into `.zedpolacode/`.
 
 mod highlight;
 mod host;
@@ -30,7 +30,7 @@ impl zed::Extension for ZedPolacodeExtension {
         worktree: Option<&Worktree>,
     ) -> zed::Result<SlashCommandOutput> {
         match command.name.as_str() {
-            "polacode" => run(&args, worktree),
+            "/zedpolacode" => run(&args, worktree),
             other => Err(format!(
                 "Zed Polacode does not handle the `{other}` command."
             )),
@@ -184,7 +184,7 @@ fn resolve_source(
     }
 
     Err(
-        "Nothing to snapshot. Give me a file and/or a line range, e.g. `/polacode src/main.rs --lines 12-40`, or paste a code block. `/polacode --help` lists every option."
+        "Nothing to snapshot. Give me a file and/or a line range, e.g. `/zedpolacode src/main.rs --lines 12-40`, or paste a code block. `/zedpolacode --help` lists every option."
             .to_string(),
     )
 }
