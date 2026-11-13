@@ -127,6 +127,16 @@ function findBrowser() {
   return null;
 }
 
+// Best effort: the profile is throwaway, so a directory the browser still
+// holds must never fail the render or change the `ok=`/`png=`/`warn=` contract.
+function removeProfile(profile) {
+  try {
+    fs.rmSync(profile, { recursive: true, force: true });
+  } catch (error) {
+    // ignored on purpose
+  }
+}
+
 function shoot(browser, htmlPath, pngPath, width, height, scale, wait) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'zedpolacode-profile-'));
   const common = [
@@ -147,28 +157,33 @@ function shoot(browser, htmlPath, pngPath, width, height, scale, wait) {
   ];
 
   let detail = '';
-  for (const mode of ['--headless=new', '--headless']) {
-    try {
-      if (fs.existsSync(pngPath)) {
-        fs.unlinkSync(pngPath);
+  try {
+    for (const mode of ['--headless=new', '--headless']) {
+      try {
+        if (fs.existsSync(pngPath)) {
+          fs.unlinkSync(pngPath);
+        }
+      } catch (error) {
+        // ignore
       }
-    } catch (error) {
-      // ignore
+      const run = spawnSync(browser, [mode, '--user-data-dir=' + profile].concat(common), {
+        timeout: 60000,
+        windowsHide: true,
+        encoding: 'utf8',
+        maxBuffer: 8 * 1024 * 1024,
+      });
+      if (isFile(pngPath) && fs.statSync(pngPath).size > 0) {
+        return { ok: true, detail: '' };
+      }
+      const stderr = (run && run.stderr) || '';
+      const failure = run && run.error ? ' ' + run.error.message : '';
+      detail = (stderr + failure).trim().replace(/\s+/g, ' ').slice(-300);
     }
-    const run = spawnSync(browser, [mode, '--user-data-dir=' + profile].concat(common), {
-      timeout: 60000,
-      windowsHide: true,
-      encoding: 'utf8',
-      maxBuffer: 8 * 1024 * 1024,
-    });
-    if (isFile(pngPath) && fs.statSync(pngPath).size > 0) {
-      return { ok: true, detail: '' };
-    }
-    const stderr = (run && run.stderr) || '';
-    const failure = run && run.error ? ' ' + run.error.message : '';
-    detail = (stderr + failure).trim().replace(/\s+/g, ' ').slice(-300);
+    return { ok: false, detail };
+  } finally {
+    // Gone before `main` emits anything, on success, failure and after the retry.
+    removeProfile(profile);
   }
-  return { ok: false, detail };
 }
 
 function main() {

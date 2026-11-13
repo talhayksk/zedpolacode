@@ -7,6 +7,7 @@
 mod host;
 mod options;
 
+use polacode_core::source::{dedent, normalize, slice_lines, SliceError};
 use polacode_core::{highlight, render, theme};
 
 use std::fmt::Write as _;
@@ -134,32 +135,24 @@ fn resolve_source(
             .read_text_file(&path)
             .map_err(|error| format!("Could not read `{requested}`: {error}"))?;
 
-        let all: Vec<&str> = raw.lines().collect();
-        if all.is_empty() {
-            return Err(format!("`{requested}` is empty."));
-        }
-        let total = all.len() as u32;
-
-        let (start, end) = match options.lines {
-            Some((start, end)) => {
-                if start > total {
-                    return Err(format!(
-                        "`{requested}` only has {total} lines, so line {start} does not exist."
-                    ));
-                }
-                let end = if end == 0 { total } else { end.min(total) };
-                (start, end)
+        let (start, end) = options.lines.unwrap_or((1, 0));
+        let slice = slice_lines(&raw, start, end).map_err(|error| match error {
+            SliceError::Empty => format!("`{requested}` is empty."),
+            SliceError::StartOutOfRange { start, total } => {
+                format!("`{requested}` only has {total} lines, so line {start} does not exist.")
             }
-            None => (1, total),
-        };
-
-        let code = all[(start as usize - 1)..(end as usize)].join("\n");
+            // `options::parse_lines` already rejects a reversed range, so this
+            // branch only keeps the match total.
+            SliceError::Reversed { start, end } => {
+                format!("Line range ends before it starts: `{start}-{end}`.")
+            }
+        })?;
 
         return Ok(Source {
             stem: sanitize(&stem_of(requested)),
             label: requested.to_string(),
-            first_line: start,
-            code,
+            first_line: slice.first_line,
+            code: slice.code,
         });
     }
 
@@ -199,47 +192,6 @@ fn worktree_relative_path(worktree: &Worktree, requested: &str) -> String {
         Some(rest) => rest.trim_start_matches('/').to_string(),
         None => normalized,
     }
-}
-
-fn normalize(code: &str) -> String {
-    let unified = code.replace("\r\n", "\n").replace('\r', "\n");
-    let mut expanded = String::with_capacity(unified.len());
-    for ch in unified.chars() {
-        if ch == '\t' {
-            expanded.push_str("    ");
-        } else {
-            expanded.push(ch);
-        }
-    }
-    expanded.trim_end_matches('\n').to_string()
-}
-
-/// Removes the indentation shared by every line so a selection keeps its shape
-/// relative to itself.
-fn dedent(code: &str) -> String {
-    let lines: Vec<&str> = code.split('\n').collect();
-    let common = lines
-        .iter()
-        .filter(|line| !line.trim().is_empty())
-        .map(|line| line.chars().take_while(|ch| *ch == ' ').count())
-        .min()
-        .unwrap_or(0);
-
-    if common == 0 {
-        return code.to_string();
-    }
-
-    lines
-        .iter()
-        .map(|line| {
-            if line.trim().is_empty() {
-                String::new()
-            } else {
-                line.chars().skip(common).collect::<String>()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 fn stem_of(label: &str) -> String {
@@ -435,23 +387,6 @@ fn complete(args: &[String]) -> Vec<SlashCommandArgumentCompletion> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn dedents_blocks() {
-        let code = "    fn main() {\n        println!(\"hi\");\n    }";
-        assert_eq!(dedent(code), "fn main() {\n    println!(\"hi\");\n}");
-    }
-
-    #[test]
-    fn keeps_relative_indentation_when_no_common_prefix() {
-        let code = "fn a() {}\n    fn b() {}";
-        assert_eq!(dedent(code), code);
-    }
-
-    #[test]
-    fn normalizes_newlines_and_tabs() {
-        assert_eq!(normalize("a\tb\r\nc\r\n"), "a    b\nc");
-    }
 
     #[test]
     fn names_files_after_the_source_and_range() {

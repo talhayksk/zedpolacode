@@ -1,0 +1,17 @@
+[package]
+name = "polacode-mcp"
+version = "0.1.0"
+edition = "2021"
+description = "MCP stdio server that turns code into a PNG code card"
+license = "MIT"
+repository = "https://github.com/talhayksk/zedpolacode"
+publish = false
+
+[[bin]]
+name = "polacode-mcp"
+path = "src/main.rs"
+
+[dependencies]
+polacode-core = { path = "../core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

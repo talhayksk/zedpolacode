@@ -384,6 +384,15 @@ name = "polacode-core"
 version = "0.1.0"
 
 [[package]]
+name = "polacode-mcp"
+version = "0.1.0"
+dependencies = [
+ "polacode-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "potential_utf"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"

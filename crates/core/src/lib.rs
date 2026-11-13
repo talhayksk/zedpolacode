@@ -7,6 +7,7 @@
 pub mod highlight;
 pub mod options;
 pub mod render;
+pub mod source;
 pub mod theme;
 
 pub use options::CardOptions;
