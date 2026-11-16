@@ -19,7 +19,7 @@
 //! MCP tool uses one: the whole path is testable without a browser or a real
 //! clipboard.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use serde_json::{json, Value};
@@ -251,6 +251,9 @@ fn parse(argv: &[String]) -> Result<Invocation, CliError> {
             "--out" => out = Some(take_value("--out", argv, &mut index)?),
             "--open" => open = true,
             "--json" => json = true,
+            // `card --help` is the usage text, exactly like `polacode-mcp
+            // --help`: the command reported an unknown option before.
+            "--help" | "-h" => return Ok(Invocation::Help),
             other => {
                 return Err(CliError::usage(format!(
                     "Unknown option `{other}`. Run `polacode-mcp --help` for usage."
@@ -451,6 +454,24 @@ fn execute(
     Ok(Executed { card, written })
 }
 
+/// Shows a finished card.
+///
+/// A trait because the interesting case is a viewer that keeps its file open
+/// (Photos memory-maps the PNG on Windows), and a test must be able to act
+/// like one without launching a GUI.
+pub(crate) trait Viewer {
+    fn open(&self, path: &Path) -> Result<(), String>;
+}
+
+/// The platform viewer: `start`, `open` or `xdg-open`.
+struct SystemViewer;
+
+impl Viewer for SystemViewer {
+    fn open(&self, path: &Path) -> Result<(), String> {
+        open_in_viewer(path)
+    }
+}
+
 #[cfg(windows)]
 fn viewer_command(path: &Path) -> Command {
     // `start` is a cmd builtin. The empty argument is the window title, so a
@@ -484,12 +505,66 @@ fn open_in_viewer(path: &Path) -> Result<(), String> {
         .map_err(|error| format!("Could not open `{}`: {error}", path.display()))
 }
 
+/// Where the throw-away copies the viewer opens live. Deliberately outside the
+/// project: a viewer keeps the file it shows open (Photos memory-maps it on
+/// Windows), and a memory-mapped file cannot be rewritten
+/// (`ERROR_USER_MAPPED_FILE`, os error 1224). The project file must therefore
+/// never be the file the viewer holds.
+const VIEWER_DIR: &str = "polacode-mcp-viewer";
+
+/// How many copies of one card base a viewer may hold at once. A new snapshot
+/// reuses the first copy the viewer has closed; when every slot is still held
+/// the CLI warns instead of opening a viewer, and names the directory.
+const VIEWER_SLOTS: u32 = 16;
+
+/// Copies `source` to a path the viewer can hold open without touching the
+/// project file, and returns it.
+///
+/// The copy goes to `<temp>/polacode-mcp-viewer/<base>-<slot>.png`, slot 1
+/// first. A copy the viewer has closed is deleted and reused, so the common
+/// case keeps one file per card; a copy it still holds cannot be deleted or
+/// overwritten, and the next slot is tried. All [`VIEWER_SLOTS`] slots held at
+/// once is an error the caller reports as a warning.
+fn viewer_copy(source: &Path) -> Result<PathBuf, String> {
+    let dir = std::env::temp_dir().join(VIEWER_DIR);
+    std::fs::create_dir_all(&dir)
+        .map_err(|error| format!("Could not create `{}`: {error}", dir.display()))?;
+
+    let stem = source
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "card".to_string());
+
+    let mut last = String::new();
+    for slot in 1..=VIEWER_SLOTS {
+        let copy = dir.join(format!("{stem}-{slot}.png"));
+        // Removing a copy whose viewer has closed reuses the slot instead of
+        // adding one. A copy the viewer still holds cannot be deleted on
+        // Windows, so the copy to that path fails and the next slot is tried.
+        let _ = std::fs::remove_file(&copy);
+        match std::fs::copy(source, &copy) {
+            Ok(_) => return Ok(copy),
+            Err(error) => last = error.to_string(),
+        }
+    }
+
+    Err(format!(
+        "Could not copy the PNG for the viewer: all {VIEWER_SLOTS} copies of `{stem}` in `{}` are still open ({last})",
+        dir.display()
+    ))
+}
+
 fn report_error(error: &CliError) -> i32 {
     eprintln!("polacode-mcp: {}", error.message);
     error.exit_code()
 }
 
-fn run_card(args: &CardArgs, renderer: &dyn PngRenderer, clipboard: &dyn Clipboard) -> i32 {
+fn run_card(
+    args: &CardArgs,
+    renderer: &dyn PngRenderer,
+    clipboard: &dyn Clipboard,
+    viewer: &dyn Viewer,
+) -> i32 {
     let executed = match execute(args, renderer, clipboard) {
         Ok(executed) => executed,
         Err(error) => return report_error(&error),
@@ -499,8 +574,18 @@ fn run_card(args: &CardArgs, renderer: &dyn PngRenderer, clipboard: &dyn Clipboa
         if let Some(path) = executed.written.png.as_deref() {
             // Best effort: the PNG is already on disk, so a missing viewer is a
             // warning, not a failed run.
-            if let Err(message) = open_in_viewer(path) {
-                eprintln!("polacode-mcp: {message}");
+            match viewer_copy(path) {
+                Ok(copy) => {
+                    if let Err(message) = viewer.open(&copy) {
+                        eprintln!("polacode-mcp: {message}");
+                    }
+                }
+                Err(message) => {
+                    eprintln!(
+                        "polacode-mcp: {message}; the PNG is at `{}`.",
+                        path.display()
+                    );
+                }
             }
         }
     }
@@ -535,6 +620,7 @@ same card without a model in the loop.
 Usage:
   polacode-mcp card --clipboard [options]
   polacode-mcp card --file <path> [--lines <range>] [options]
+  polacode-mcp card --help
   polacode-mcp --help
   polacode-mcp --version
 
@@ -566,7 +652,9 @@ Card:
 Output:
   --out <dir>              Where to write the .png and .html. Default
                            .zedpolacode in the current directory.
-  --open                   Open the PNG in the default viewer.
+  --open                   Open the PNG in the default viewer. The viewer gets
+                           a copy in the system temp directory, so the project
+                           file stays writable and always holds the newest card.
   --json                   Print one JSON object instead of a human line.
 
 Other:
@@ -596,7 +684,7 @@ pub(crate) fn main(argv: &[String]) -> i32 {
         Ok(Invocation::Card(args)) => {
             // Discovered only for `card`, so `--help` and `--version` stay cheap.
             let renderer = BrowserRenderer::discover();
-            run_card(&args, &renderer, &SystemClipboard)
+            run_card(&args, &renderer, &SystemClipboard, &SystemViewer)
         }
         Err(error) => report_error(&error),
     }
@@ -605,6 +693,8 @@ pub(crate) fn main(argv: &[String]) -> i32 {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
+    use std::path::{Path, PathBuf};
+    use std::sync::Mutex;
 
     use super::*;
     use crate::browser::TempDir;
@@ -638,6 +728,89 @@ mod tests {
             _scale: u32,
         ) -> Result<Vec<u8>, RenderError> {
             Err(RenderError::NoBrowser)
+        }
+    }
+
+    /// Opens `path` the way a viewer that keeps the file open does: on Windows
+    /// with no sharing at all, so a write, rename or delete of that exact path
+    /// fails until the handle is dropped. The defect this pins is therefore
+    /// Windows-only (POSIX readers never block a writer).
+    #[cfg(windows)]
+    fn hold_open(path: &Path) -> Result<std::fs::File, String> {
+        use std::os::windows::fs::OpenOptionsExt;
+        std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(path)
+            .map_err(|error| format!("could not hold `{}`: {error}", path.display()))
+    }
+
+    #[cfg(not(windows))]
+    fn hold_open(path: &Path) -> Result<std::fs::File, String> {
+        std::fs::File::open(path)
+            .map_err(|error| format!("could not hold `{}`: {error}", path.display()))
+    }
+
+    /// A viewer that never lets go of what it was given.
+    struct HoldingViewer {
+        opened: Mutex<Vec<PathBuf>>,
+        held: Mutex<Vec<std::fs::File>>,
+    }
+
+    impl HoldingViewer {
+        fn new() -> Self {
+            Self {
+                opened: Mutex::new(Vec::new()),
+                held: Mutex::new(Vec::new()),
+            }
+        }
+
+        fn opened(&self) -> Vec<PathBuf> {
+            self.opened.lock().expect("the viewer log").clone()
+        }
+    }
+
+    impl Viewer for HoldingViewer {
+        fn open(&self, path: &Path) -> Result<(), String> {
+            let file = hold_open(path)?;
+            self.held.lock().expect("the held handles").push(file);
+            self.opened
+                .lock()
+                .expect("the viewer log")
+                .push(path.to_path_buf());
+            Ok(())
+        }
+    }
+
+    /// A renderer that returns a distinct PNG per call, so a test can tell
+    /// which snapshot ended up in the project file.
+    struct RunRenderer(Mutex<Vec<Vec<u8>>>);
+
+    impl RunRenderer {
+        fn new() -> Self {
+            Self(Mutex::new(Vec::new()))
+        }
+
+        fn renders(&self) -> Vec<Vec<u8>> {
+            self.0.lock().expect("the render log").clone()
+        }
+    }
+
+    impl PngRenderer for RunRenderer {
+        fn render_png(
+            &self,
+            _html: &str,
+            _width: u32,
+            _height: u32,
+            _scale: u32,
+        ) -> Result<Vec<u8>, RenderError> {
+            let mut renders = self.0.lock().expect("the render log");
+            let mut png = ONE_PIXEL_PNG.to_vec();
+            // Still starts with the PNG signature; the extra byte only makes
+            // the runs distinguishable to the assertions.
+            png.push(u8::try_from(renders.len() + 1).unwrap_or(1));
+            renders.push(png.clone());
+            Ok(png)
         }
     }
 
@@ -1020,6 +1193,143 @@ mod tests {
         );
         assert!(!out.exists(), "no output on a failed render");
         assert_eq!(error.exit_code(), EXIT_RUNTIME);
+    }
+
+    #[test]
+    fn a_second_snapshot_succeeds_while_the_viewer_holds_the_first() {
+        let dir = TempDir::create().expect("temp dir");
+        let out = dir.path.join("out");
+        let out_text = out.to_string_lossy().to_string();
+        let args = card_args(&[
+            "card",
+            "--clipboard",
+            "--title",
+            "demo.rs",
+            "--out",
+            out_text.as_str(),
+            "--open",
+        ]);
+        let renderer = RunRenderer::new();
+        let viewer = HoldingViewer::new();
+
+        let first = run_card(&args, &renderer, &FakeClipboard("fn main() {}"), &viewer);
+        assert_eq!(first, EXIT_OK, "the first snapshot renders");
+
+        let second = run_card(
+            &args,
+            &renderer,
+            &FakeClipboard("fn main() { second(); }"),
+            &viewer,
+        );
+        assert_eq!(
+            second, EXIT_OK,
+            "the second snapshot must not fail while the viewer holds the first"
+        );
+
+        // The project file holds the latest snapshot, not the one the viewer
+        // is showing.
+        let renders = renderer.renders();
+        assert_eq!(renders.len(), 2, "both runs rendered");
+        assert_eq!(
+            std::fs::read(out.join("demo.png")).expect("the project PNG"),
+            renders[1]
+        );
+
+        // The viewer was handed copies outside the project, one per snapshot.
+        let opened = viewer.opened();
+        assert_eq!(opened.len(), 2, "the viewer opened both snapshots");
+        if cfg!(windows) {
+            // A held copy cannot be deleted or replaced on Windows, so the
+            // second snapshot needs its own file. POSIX lets a reader share
+            // the file, so there slot 1 is reused and the paths are equal.
+            assert_ne!(opened[0], opened[1], "each snapshot needs its own copy");
+        }
+        for path in &opened {
+            assert!(
+                !path.starts_with(&out),
+                "the viewer must never map the project file: {}",
+                path.display()
+            );
+            assert_eq!(
+                path.extension().and_then(|value| value.to_str()),
+                Some("png"),
+                "{}",
+                path.display()
+            );
+            assert!(path.exists(), "{} is still available", path.display());
+        }
+
+        // Test hygiene: drop the "viewer" handles, then its copies.
+        drop(viewer);
+        for path in &opened {
+            let _ = std::fs::remove_file(path);
+        }
+        let _ = std::fs::remove_dir(std::env::temp_dir().join(VIEWER_DIR));
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn viewer_copies_are_bounded_and_reused() {
+        let dir = TempDir::create().expect("temp dir");
+        let source = dir.path.join("polacode-viewer-slot.png");
+        std::fs::write(&source, b"card").expect("write");
+
+        let first = viewer_copy(&source).expect("a copy");
+        assert_eq!(
+            first.file_name().and_then(|name| name.to_str()),
+            Some("polacode-viewer-slot-1.png"),
+            "the first free slot is used"
+        );
+
+        let held = hold_open(&first).expect("hold the copy");
+        let second = viewer_copy(&source).expect("a second copy");
+        assert_ne!(first, second, "a copy the viewer holds is skipped");
+        assert_eq!(
+            second.file_name().and_then(|name| name.to_str()),
+            Some("polacode-viewer-slot-2.png")
+        );
+        drop(held);
+
+        let reused = viewer_copy(&source).expect("a reused slot");
+        assert_eq!(reused, first, "a copy the viewer closed is reused");
+
+        // Every slot held at once is the documented bound.
+        let mut held = Vec::new();
+        let mut copies = Vec::new();
+        for _ in 0..VIEWER_SLOTS {
+            let copy = viewer_copy(&source).expect("a free slot");
+            held.push(hold_open(&copy).expect("hold the copy"));
+            copies.push(copy);
+        }
+        let error = viewer_copy(&source).expect_err("no slot left");
+        assert!(error.contains(&VIEWER_SLOTS.to_string()), "{error}");
+        assert!(error.contains(VIEWER_DIR), "{error}");
+
+        // Test hygiene: release the handles, then remove the copies.
+        drop(held);
+        for copy in copies {
+            let _ = std::fs::remove_file(copy);
+        }
+        let _ = std::fs::remove_file(reused);
+        let _ = std::fs::remove_dir(std::env::temp_dir().join(VIEWER_DIR));
+    }
+
+    #[test]
+    fn card_help_is_help_not_an_unknown_option() {
+        assert!(matches!(
+            parse_args(&["card", "--help"]),
+            Ok(Invocation::Help)
+        ));
+        assert!(matches!(parse_args(&["card", "-h"]), Ok(Invocation::Help)));
+        assert!(matches!(
+            parse_args(&["card", "--clipboard", "--help"]),
+            Ok(Invocation::Help)
+        ));
+        // A bad flag is still a usage error, not a help request.
+        assert_eq!(
+            parse_args(&["card", "--badflag"]).unwrap_err().exit_code(),
+            EXIT_USAGE
+        );
     }
 
     #[test]
