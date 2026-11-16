@@ -179,7 +179,10 @@ fn initialize_echoes_the_client_protocol_version() {
         json!({ "tools": {} })
     );
     assert_eq!(response[0]["result"]["serverInfo"]["name"], "polacode-mcp");
-    assert_eq!(response[0]["result"]["serverInfo"]["version"], "0.1.0");
+    assert_eq!(
+        response[0]["result"]["serverInfo"]["version"],
+        env!("CARGO_PKG_VERSION")
+    );
 }
 
 #[test]

@@ -385,7 +385,7 @@ version = "0.1.0"
 
 [[package]]
 name = "polacode-mcp"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "polacode-core",
  "serde",

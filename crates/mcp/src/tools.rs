@@ -258,13 +258,14 @@ fn snapshot(args: &SnapshotArgs, renderer: &dyn PngRenderer) -> Value {
     })
 }
 
-#[derive(Default)]
-struct Written {
-    png: Option<PathBuf>,
-    html: Option<PathBuf>,
+#[derive(Debug, Default)]
+pub(crate) struct Written {
+    pub(crate) png: Option<PathBuf>,
+    pub(crate) html: Option<PathBuf>,
 }
 
-fn write_files(card: &Card, png: &[u8], out_dir: &str) -> Result<Written, String> {
+/// Shared with the CLI: both surfaces write the same two files the same way.
+pub(crate) fn write_files(card: &Card, png: &[u8], out_dir: &str) -> Result<Written, String> {
     std::fs::create_dir_all(out_dir)
         .map_err(|error| format!("Could not create `{out_dir}`: {error}"))?;
 
@@ -283,7 +284,7 @@ fn write_files(card: &Card, png: &[u8], out_dir: &str) -> Result<Written, String
     })
 }
 
-fn summary(card: &Card, written: &Written) -> String {
+pub(crate) fn summary(card: &Card, written: &Written) -> String {
     let mut text = String::new();
     let _ = writeln!(text, "lines: {}", card.lines);
     let _ = writeln!(text, "first_line: {}", card.first_line);
@@ -309,6 +310,37 @@ fn summary(card: &Card, written: &Written) -> String {
         text.pop();
     }
     text
+}
+
+/// The same field names as [`summary`], as one JSON object for the CLI's
+/// `--json` flag. Keep the two in sync: a test in `cli.rs` asserts the key set.
+pub(crate) fn summary_json(card: &Card, written: &Written) -> Value {
+    let mut object = serde_json::Map::new();
+    object.insert("lines".to_string(), json!(card.lines));
+    object.insert("first_line".to_string(), json!(card.first_line));
+    object.insert("language".to_string(), json!(card.language));
+    object.insert("theme".to_string(), json!(card.theme));
+    object.insert("title".to_string(), json!(card.title));
+    object.insert(
+        "canvas_css".to_string(),
+        json!(format!("{}x{}", card.width, card.height)),
+    );
+    object.insert(
+        "canvas_device".to_string(),
+        json!(format!(
+            "{}x{} @{}x",
+            card.width.saturating_mul(card.scale),
+            card.height.saturating_mul(card.scale),
+            card.scale
+        )),
+    );
+    if let Some(png) = &written.png {
+        object.insert("png".to_string(), json!(png.display().to_string()));
+    }
+    if let Some(html) = &written.html {
+        object.insert("html".to_string(), json!(html.display().to_string()));
+    }
+    Value::Object(object)
 }
 
 fn tool_error(message: &str) -> Value {

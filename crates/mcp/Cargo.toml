@@ -1,6 +1,6 @@
 [package]
 name = "polacode-mcp"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "MCP stdio server that turns code into a PNG code card"
 license = "MIT"
