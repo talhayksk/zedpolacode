@@ -46,3 +46,24 @@ jobs:
           name: zedpolacode-wasm
           path: target/wasm32-wasip2/release/zedpolacode.wasm
           if-no-files-found: error
+
+  # The npm wrapper has no dependencies and its suite never touches the
+  # network, so it needs nothing beyond Node. It also guards server.json, which
+  # is only valid while it matches package.json.
+  npm:
+    name: npm wrapper
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: npm/zpolacode-mcp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Node tests
+        run: npm test

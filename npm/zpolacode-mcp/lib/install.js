@@ -19,17 +19,17 @@ const { version: PACKAGE_VERSION } = require('../package.json');
 const RELEASE_BASE = 'https://github.com/talhayksk/zedpolacode/releases/download';
 const MAX_REDIRECTS = 5;
 const REQUEST_TIMEOUT_MS = 30_000;
-const USER_AGENT = 'polacode-mcp-npm';
+const USER_AGENT = 'zpolacode-mcp-npm';
 
 /** The contracted asset URL: one zip per release version and target triple. */
 function assetUrl(version, triple) {
-  return `${RELEASE_BASE}/mcp-v${version}/polacode-mcp-${triple}.zip`;
+  return `${RELEASE_BASE}/mcp-v${version}/zpolacode-mcp-${triple}.zip`;
 }
 
-/** `<homedir>/.polacode-mcp`, or `POLACODE_MCP_CACHE_DIR` when set. */
+/** `<homedir>/.zpolacode-mcp`, or `ZPOLACODE_MCP_CACHE_DIR` when set. */
 function cacheRoot(env = process.env) {
-  const override = env.POLACODE_MCP_CACHE_DIR;
-  return override ? path.resolve(override) : path.join(os.homedir(), '.polacode-mcp');
+  const override = env.ZPOLACODE_MCP_CACHE_DIR;
+  return override ? path.resolve(override) : path.join(os.homedir(), '.zpolacode-mcp');
 }
 
 /** `<root>/<version>/<triple>`: a new release or platform never reuses a file. */
@@ -110,11 +110,11 @@ function isInstalled(file) {
 async function ensureBinary(options = {}) {
   const env = options.env ?? process.env;
 
-  const pinned = env.POLACODE_MCP_BINARY;
+  const pinned = env.ZPOLACODE_MCP_BINARY;
   if (pinned) {
     const resolved = path.resolve(pinned);
     if (!fs.existsSync(resolved)) {
-      throw new Error(`POLACODE_MCP_BINARY points at ${resolved}, which does not exist.`);
+      throw new Error(`ZPOLACODE_MCP_BINARY points at ${resolved}, which does not exist.`);
     }
     return resolved;
   }
@@ -139,17 +139,17 @@ async function ensureBinary(options = {}) {
 
 /**
  * The postinstall step. It never throws and always reports success: a machine
- * without a network still gets a working package, because `bin/polacode-mcp.js`
+ * without a network still gets a working package, because `bin/zpolacode-mcp.js`
  * downloads on the first run.
  */
 async function runPostinstall(options = {}) {
   const log = options.log ?? ((line) => process.stdout.write(`${line}\n`));
   try {
     const binary = await ensureBinary(options);
-    log(`polacode-mcp: binary ready at ${binary}`);
+    log(`zpolacode-mcp: binary ready at ${binary}`);
   } catch (error) {
     log(
-      `polacode-mcp: could not fetch the binary now (${error.message}); ` +
+      `zpolacode-mcp: could not fetch the binary now (${error.message}); ` +
         'it will be downloaded on the first run.'
     );
   }

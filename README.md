@@ -100,6 +100,21 @@ Add `.zedpolacode/` to your project's `.gitignore`.
 
 ---
 
+## MCP server
+
+The Zed Polacode renderer also ships as `zpolacode-mcp`, a stdio MCP server with a
+single `snapshot` tool, for assistants that speak MCP instead of slash commands:
+
+```bash
+npx -y zpolacode-mcp
+```
+
+Client configs for Claude Desktop, Claude Code, Zed and opencode, plus the
+`card` CLI flags, live in
+[npm/zpolacode-mcp/README.md](npm/zpolacode-mcp/README.md).
+
+---
+
 ## Options
 
 | Option | Description |
@@ -163,6 +178,8 @@ flowchart TD
 | `src/options.rs` | Slash-command flag parsing (builds `CardOptions`) |
 | `src/host.rs` | Node invocation, path/warning translation |
 | `src/zedpolacode.js` | Host side: file writes, browser discovery, `--screenshot` |
+| `crates/mcp/` | `zpolacode-mcp`: the MCP stdio server and its `card` CLI |
+| `npm/zpolacode-mcp/` | npm wrapper that downloads the release binary; `server.json` for the MCP registry |
 | `crates/core/src/highlight.rs` | Dependency-free tokenizer + language definitions |
 | `crates/core/src/theme.rs` | Color palettes |
 | `crates/core/src/render.rs` | HTML card generation and canvas measurement |

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// postinstall: warm the cache so the first `npx -y polacode-mcp` is instant.
+// postinstall: warm the cache so the first `npx -y zpolacode-mcp` is instant.
 // A failure here must never fail the install: the bin downloads on first run.
 require('../lib/install')
   .runPostinstall()

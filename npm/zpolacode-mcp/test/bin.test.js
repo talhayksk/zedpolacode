@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const BIN = path.join(__dirname, '..', 'bin', 'polacode-mcp.js');
+const BIN = path.join(__dirname, '..', 'bin', 'zpolacode-mcp.js');
 
 function temporaryDirectory() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'polacode-bin-test-'));
@@ -15,7 +15,7 @@ function temporaryDirectory() {
 
 /**
  * Writes a stand-in binary as a Node script. The wrapper runs a `.js`
- * POLACODE_MCP_BINARY through its own Node, which is the documented escape
+ * ZPOLACODE_MCP_BINARY through its own Node, which is the documented escape
  * hatch; the released binary is a native executable and takes the plain path.
  */
 function writeFakeBinary(body) {
@@ -30,8 +30,8 @@ function runBin(args, { env = {}, input } = {}) {
     input,
     env: {
       ...process.env,
-      POLACODE_MCP_CACHE_DIR: temporaryDirectory(),
-      POLACODE_MCP_BINARY: '',
+      ZPOLACODE_MCP_CACHE_DIR: temporaryDirectory(),
+      ZPOLACODE_MCP_BINARY: '',
       ...env,
     },
   });
@@ -42,7 +42,7 @@ test('arguments reach the binary unchanged', () => {
 
   const result = runBin(
     ['card', '--clipboard', '--lang', 'Rust', '--title', 'npm e2e.rs', '--open'],
-    { env: { POLACODE_MCP_BINARY: fake } }
+    { env: { ZPOLACODE_MCP_BINARY: fake } }
   );
 
   assert.equal(result.status, 0, result.stderr);
@@ -68,7 +68,7 @@ test('stdin and stdout are inherited, so the MCP stdio protocol flows through', 
   );
 
   const result = runBin([], {
-    env: { POLACODE_MCP_BINARY: fake },
+    env: { ZPOLACODE_MCP_BINARY: fake },
     input: '{"jsonrpc":"2.0","id":1,"method":"ping"}\n',
   });
 
@@ -80,17 +80,17 @@ test('the exit code of the binary becomes the exit code of the wrapper', () => {
   const seven = writeFakeBinary('process.exit(7);');
   const zero = writeFakeBinary('process.exit(0);');
 
-  assert.equal(runBin([], { env: { POLACODE_MCP_BINARY: seven } }).status, 7);
-  assert.equal(runBin([], { env: { POLACODE_MCP_BINARY: zero } }).status, 0);
+  assert.equal(runBin([], { env: { ZPOLACODE_MCP_BINARY: seven } }).status, 7);
+  assert.equal(runBin([], { env: { ZPOLACODE_MCP_BINARY: zero } }).status, 0);
 });
 
 test('a missing pinned binary is reported, not thrown as a stack trace', () => {
   const missing = path.join(temporaryDirectory(), 'not-here.exe');
 
-  const result = runBin([], { env: { POLACODE_MCP_BINARY: missing } });
+  const result = runBin([], { env: { ZPOLACODE_MCP_BINARY: missing } });
 
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /^polacode-mcp: POLACODE_MCP_BINARY points at /);
+  assert.match(result.stderr, /^zpolacode-mcp: ZPOLACODE_MCP_BINARY points at /);
   assert.equal(result.stdout, '');
 });
 
@@ -98,10 +98,10 @@ test('a target that cannot be executed is reported, not thrown as a stack trace'
   const notABinary = path.join(temporaryDirectory(), 'not-a-binary.txt');
   fs.writeFileSync(notABinary, 'this is not an executable');
 
-  const result = runBin([], { env: { POLACODE_MCP_BINARY: notABinary } });
+  const result = runBin([], { env: { ZPOLACODE_MCP_BINARY: notABinary } });
 
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /^polacode-mcp: could not start .*not-a-binary\.txt: /);
+  assert.match(result.stderr, /^zpolacode-mcp: could not start .*not-a-binary\.txt: /);
   assert.doesNotMatch(result.stderr, /at main \(/);
 });
 

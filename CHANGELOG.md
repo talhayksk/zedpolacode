@@ -2,6 +2,36 @@
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+- The MCP server is now `zpolacode-mcp`: crate, binary, npm package, release
+  archives, the `~/.zpolacode-mcp` cache and the `ZPOLACODE_MCP_*` variables all
+  carry the `z` prefix so the name says it belongs to Zed Polacode. The registry
+  entry is `io.github.talhayksk/zpolacode`, replacing `polacode`.
+- `release-mcp.yml` can sign the release binaries: Authenticode on Windows and
+  Developer ID plus notarisation on macOS. The steps activate only when the
+  signing secrets exist, so releases still build without certificates.
+
+## polacode-mcp 0.2.1 — 2026-11-16
+
+- `card --open` shows a throw-away copy in the system temp directory, so a
+  second snapshot never collides with an image viewer still holding the first.
+- Distributed on npm as `polacode-mcp`, a dependency-free wrapper that
+  downloads the matching release binary and forwards stdio, arguments, exit
+  codes and signals; `npx -y polacode-mcp` is the server.
+- `npm/polacode-mcp/server.json` describes the server for the official MCP
+  registry, and a test keeps it in step with `package.json`.
+
+## polacode-mcp 0.2.0 — 2026-11-16
+
+- `card` CLI mode: `--clipboard` or `--file`, the same card pipeline without a
+  model in the loop, with `--json`, `--out` and `--open`.
+
+## polacode-mcp 0.1.0 — 2026-11-16
+
+- MCP stdio server exposing one `snapshot` tool (file path or inline code).
+- Release pipeline producing five platform zips plus `sha256sums.txt`.
+
 ## 0.1.3 — 2026-11-12
 
 - Registry ID is now `zpolacode`: the rule forbids the *word* `zed`, not the

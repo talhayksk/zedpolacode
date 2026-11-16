@@ -9,7 +9,7 @@ use crate::card::PngRenderer;
 use crate::protocol::{self, ErrorObject, Incoming, METHOD_NOT_FOUND};
 use crate::tools;
 
-pub const SERVER_NAME: &str = "polacode-mcp";
+pub const SERVER_NAME: &str = "zpolacode-mcp";
 
 /// What `initialize` answers when the client does not state a version.
 pub const DEFAULT_PROTOCOL_VERSION: &str = "2024-11-05";
@@ -102,7 +102,7 @@ mod tests {
         assert_eq!(response["id"], json!(1));
         assert_eq!(response["result"]["protocolVersion"], "2025-06-18");
         assert_eq!(response["result"]["capabilities"], json!({ "tools": {} }));
-        assert_eq!(response["result"]["serverInfo"]["name"], "polacode-mcp");
+        assert_eq!(response["result"]["serverInfo"]["name"], "zpolacode-mcp");
         assert_eq!(
             response["result"]["serverInfo"]["version"],
             env!("CARGO_PKG_VERSION")

@@ -1,11 +1,11 @@
-name: Release polacode-mcp
+name: Release zpolacode-mcp
 
 # Binary release train for the MCP server. Separate from the extension's v* tags.
 #
 # CONTRACT (the thin Zed extension, Phase 3, is written against this — do not rename):
-#   https://github.com/talhayksk/zedpolacode/releases/download/mcp-v<version>/polacode-mcp-<target>.zip
-#   <version>  = the `version` field of crates/mcp/Cargo.toml (0.1.0 today)
-#   zip root   = exactly one file: polacode-mcp.exe on Windows, polacode-mcp elsewhere
+#   https://github.com/talhayksk/zedpolacode/releases/download/mcp-v<version>/zpolacode-mcp-<target>.zip
+#   <version>  = the `version` field of crates/mcp/Cargo.toml (0.3.0 today)
+#   zip root   = exactly one file: zpolacode-mcp.exe on Windows, zpolacode-mcp elsewhere
 #   release    = those five zips plus sha256sums.txt at the release root
 #
 # Tag push  mcp-v<version>  -> build, package, publish a GitHub Release.
@@ -88,13 +88,24 @@ jobs:
       - name: cargo fmt --check
         run: cargo fmt --check
 
-      - name: cargo test -p polacode-mcp
-        run: cargo test --locked -p polacode-mcp
+      - name: cargo test -p zpolacode-mcp
+        run: cargo test --locked -p zpolacode-mcp
 
   build:
     name: Build ${{ matrix.target }}
     needs: [version, test]
     runs-on: ${{ matrix.os }}
+    # Signing is optional: each step below only runs when its secret exists, so a
+    # release without certificates is still built, just annotated as unsigned.
+    env:
+      WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+      WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+      MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+      MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
     strategy:
       fail-fast: false
       matrix:
@@ -132,7 +143,7 @@ jobs:
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
 
       - name: cargo build
-        run: cargo build --locked -p polacode-mcp --release --target ${{ matrix.target }}
+        run: cargo build --locked -p zpolacode-mcp --release --target ${{ matrix.target }}
 
       # The binary is a stdio server: it blocks on stdin, so feed it one ping line.
       - name: Smoke test the binary
@@ -140,14 +151,14 @@ jobs:
         shell: bash
         run: |
           set -eu
-          bin="target/${{ matrix.target }}/release/polacode-mcp"
+          bin="target/${{ matrix.target }}/release/zpolacode-mcp"
           if [ "${{ runner.os }}" = "Windows" ]; then bin="$bin.exe"; fi
           out=$(printf '{"jsonrpc":"2.0","id":1,"method":"ping"}\n' | "$bin")
           echo "reply: $out"
           case "$out" in
             *'"result":{}'*) echo "ping answered" ;;
             *)
-              echo "::error::polacode-mcp did not answer ping"
+              echo "::error::zpolacode-mcp did not answer ping"
               exit 1
               ;;
           esac
@@ -158,15 +169,78 @@ jobs:
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           set -eu
-          file "target/${{ matrix.target }}/release/polacode-mcp"
-          file "target/${{ matrix.target }}/release/polacode-mcp" | grep -qi 'aarch64'
+          file "target/${{ matrix.target }}/release/zpolacode-mcp"
+          file "target/${{ matrix.target }}/release/zpolacode-mcp" | grep -qi 'aarch64'
+
+      # Signing happens before packaging on purpose: the zip hashes in
+      # sha256sums.txt must cover the signed bytes, not the raw build output.
+      - name: Sign the Windows binary (Authenticode)
+        if: runner.os == 'Windows' && env.WINDOWS_CERT_PFX != ''
+        shell: pwsh
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERT_PFX))
+
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { throw 'signtool.exe was not found in the Windows SDK.' }
+
+          $binary = "target/${{ matrix.target }}/release/zpolacode-mcp.exe"
+          try {
+            & $signtool.FullName sign /fd SHA256 /f $pfx /p $env:WINDOWS_CERT_PASSWORD `
+              /tr http://timestamp.digicert.com /td SHA256 $binary
+            if ($LASTEXITCODE -ne 0) { throw "signtool sign exited $LASTEXITCODE" }
+          } finally {
+            Remove-Item $pfx -Force -ErrorAction SilentlyContinue
+          }
+
+          $signature = Get-AuthenticodeSignature $binary
+          Write-Host "signature: $($signature.Status) — $($signature.SignerCertificate.Subject)"
+          if ($signature.Status -ne 'Valid') { throw "The signed binary does not verify: $($signature.Status)" }
+
+      - name: Note that the Windows binary is unsigned
+        if: runner.os == 'Windows' && env.WINDOWS_CERT_PFX == ''
+        shell: pwsh
+        run: Write-Host '::warning::No WINDOWS_CERT_PFX_BASE64 secret; this build is unsigned and SmartScreen will warn.'
+
+      - name: Sign the macOS binary (Developer ID)
+        if: runner.os == 'macOS' && env.MACOS_CERT_P12 != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          certificate="$RUNNER_TEMP/signing.p12"
+
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+
+          printf '%s' "$MACOS_CERT_P12" | base64 -D > "$certificate"
+          security import "$certificate" -k "$keychain" -P "$MACOS_CERT_PASSWORD" \
+            -T /usr/bin/codesign > /dev/null
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$keychain_password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" \
+            $(security list-keychains -d user | tr -d '"')
+          rm -f "$certificate"
+
+          binary="target/${{ matrix.target }}/release/zpolacode-mcp"
+          codesign --force --options runtime --timestamp \
+            --sign "$MACOS_SIGNING_IDENTITY" "$binary"
+          codesign --verify --strict --verbose=2 "$binary"
+
+      - name: Note that the macOS binary is unsigned
+        if: runner.os == 'macOS' && env.MACOS_CERT_P12 == ''
+        shell: bash
+        run: echo '::warning::No MACOS_CERT_P12_BASE64 secret; this build is unsigned and Gatekeeper will warn.'
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $zip = "polacode-mcp-${{ matrix.target }}.zip"
-          Compress-Archive -Path "target/${{ matrix.target }}/release/polacode-mcp.exe" -DestinationPath $zip -Force
+          $zip = "zpolacode-mcp-${{ matrix.target }}.zip"
+          Compress-Archive -Path "target/${{ matrix.target }}/release/zpolacode-mcp.exe" -DestinationPath $zip -Force
           # One "<hash>  <name>" line, LF-terminated, so the aggregated
           # sha256sums.txt verifies with `sha256sum -c` on Linux and macOS.
           $hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()
@@ -178,9 +252,9 @@ jobs:
         shell: bash
         run: |
           set -eu
-          zip="polacode-mcp-${{ matrix.target }}.zip"
+          zip="zpolacode-mcp-${{ matrix.target }}.zip"
           out="$PWD/$zip"
-          (cd "target/${{ matrix.target }}/release" && zip -q "$out" polacode-mcp)
+          (cd "target/${{ matrix.target }}/release" && zip -q "$out" zpolacode-mcp)
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum "$zip" > "$zip.sha256"
           else
@@ -188,17 +262,44 @@ jobs:
           fi
           cat "$zip.sha256"
 
+      # The notary ticket lives on Apple's servers, not in the archive: a bare
+      # executable cannot be stapled, so the first launch needs network access.
+      # The status is checked explicitly because a rejected submission is still a
+      # successful tool invocation.
+      - name: Notarise the macOS archive
+        if: runner.os == 'macOS' && env.APPLE_ID != '' && env.MACOS_CERT_P12 != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(xcrun notarytool submit "zpolacode-mcp-${{ matrix.target }}.zip" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --wait --output-format json)
+          echo "$result"
+
+          status=$(printf '%s' "$result" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
+          id=$(printf '%s' "$result" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+          if [ "$status" != "Accepted" ]; then
+            echo "::error::Notarisation was $status"
+            xcrun notarytool log "$id" \
+              --apple-id "$APPLE_ID" \
+              --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_APP_PASSWORD" || true
+            exit 1
+          fi
+
       # The extension unpacks a fixed relative name, so the layout is part of the contract.
       - name: Verify archive layout (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path "polacode-mcp-${{ matrix.target }}.zip").Path)
+          $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path "zpolacode-mcp-${{ matrix.target }}.zip").Path)
           try { $names = @($zip.Entries | ForEach-Object FullName) } finally { $zip.Dispose() }
           Write-Host "entries: $($names -join ', ')"
-          if ($names.Count -ne 1 -or $names[0] -ne 'polacode-mcp.exe') {
-            throw "The zip must contain exactly polacode-mcp.exe at its root."
+          if ($names.Count -ne 1 -or $names[0] -ne 'zpolacode-mcp.exe') {
+            throw "The zip must contain exactly zpolacode-mcp.exe at its root."
           }
 
       - name: Verify archive layout (Linux and macOS)
@@ -206,20 +307,20 @@ jobs:
         shell: bash
         run: |
           set -eu
-          names=$(unzip -Z1 "polacode-mcp-${{ matrix.target }}.zip")
+          names=$(unzip -Z1 "zpolacode-mcp-${{ matrix.target }}.zip")
           echo "entries: $names"
-          if [ "$names" != "polacode-mcp" ]; then
-            echo "::error::The zip must contain exactly polacode-mcp at its root."
+          if [ "$names" != "zpolacode-mcp" ]; then
+            echo "::error::The zip must contain exactly zpolacode-mcp at its root."
             exit 1
           fi
 
       - name: Keep the artefact for the release job
         uses: actions/upload-artifact@v4
         with:
-          name: polacode-mcp-${{ matrix.target }}
+          name: zpolacode-mcp-${{ matrix.target }}
           path: |
-            polacode-mcp-${{ matrix.target }}.zip
-            polacode-mcp-${{ matrix.target }}.zip.sha256
+            zpolacode-mcp-${{ matrix.target }}.zip
+            zpolacode-mcp-${{ matrix.target }}.zip.sha256
           if-no-files-found: error
           retention-days: 7
 
@@ -259,7 +360,7 @@ jobs:
       - name: Create the release
         uses: softprops/action-gh-release@v2
         with:
-          name: polacode-mcp v${{ needs.version.outputs.version }}
+          name: zpolacode-mcp v${{ needs.version.outputs.version }}
           tag_name: ${{ github.ref_name }}
           draft: false
           prerelease: false

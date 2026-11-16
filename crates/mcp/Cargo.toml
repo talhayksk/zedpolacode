@@ -1,6 +1,6 @@
 [package]
-name = "polacode-mcp"
-version = "0.2.1"
+name = "zpolacode-mcp"
+version = "0.3.0"
 edition = "2021"
 description = "MCP stdio server that turns code into a PNG code card"
 license = "MIT"
@@ -8,7 +8,7 @@ repository = "https://github.com/talhayksk/zedpolacode"
 publish = false
 
 [[bin]]
-name = "polacode-mcp"
+name = "zpolacode-mcp"
 path = "src/main.rs"
 
 [dependencies]

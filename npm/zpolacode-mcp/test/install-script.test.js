@@ -19,14 +19,14 @@ function temporaryDirectory() {
 function runScript(overrides) {
   return spawnSync(process.execPath, [SCRIPT], {
     encoding: 'utf8',
-    env: { ...process.env, POLACODE_MCP_BINARY: '', POLACODE_MCP_CACHE_DIR: '', ...overrides },
+    env: { ...process.env, ZPOLACODE_MCP_BINARY: '', ZPOLACODE_MCP_CACHE_DIR: '', ...overrides },
   });
 }
 
 test('a failing download is reported once and the step still succeeds', async () => {
   const lines = [];
   const code = await runPostinstall({
-    env: { POLACODE_MCP_CACHE_DIR: temporaryDirectory() },
+    env: { ZPOLACODE_MCP_CACHE_DIR: temporaryDirectory() },
     download: async () => {
       throw new Error('getaddrinfo ENOTFOUND github.com');
     },
@@ -45,7 +45,7 @@ test('the script exits 0 when the cache cannot even be created', () => {
   fs.writeFileSync(blocker, 'this is a file, so it cannot hold a cache directory');
 
   // No network is reached: the directory is created before the request.
-  const result = runScript({ POLACODE_MCP_CACHE_DIR: blocker });
+  const result = runScript({ ZPOLACODE_MCP_CACHE_DIR: blocker });
 
   assert.equal(result.status, 0, result.stderr);
   const lines = result.stdout.trim().split(/\r?\n/);
@@ -54,12 +54,12 @@ test('the script exits 0 when the cache cannot even be created', () => {
 });
 
 test('the script reports an already pinned binary', () => {
-  const pinned = path.join(temporaryDirectory(), 'polacode-mcp.exe');
+  const pinned = path.join(temporaryDirectory(), 'zpolacode-mcp.exe');
   fs.writeFileSync(pinned, 'stand-in binary');
 
-  const result = runScript({ POLACODE_MCP_BINARY: pinned });
+  const result = runScript({ ZPOLACODE_MCP_BINARY: pinned });
 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /binary ready at/);
-  assert.match(result.stdout, /polacode-mcp\.exe/);
+  assert.match(result.stdout, /zpolacode-mcp\.exe/);
 });

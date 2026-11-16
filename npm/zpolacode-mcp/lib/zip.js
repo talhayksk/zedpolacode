@@ -28,7 +28,7 @@ const MAX_UNCOMPRESSED = 64 * 1024 * 1024;
 
 /** Throws a parser error carrying the reason. */
 function fail(reason) {
-  throw new Error(`Unusable polacode-mcp archive: ${reason}`);
+  throw new Error(`Unusable zpolacode-mcp archive: ${reason}`);
 }
 
 /** Finds the End of Central Directory record, scanning back over the comment. */

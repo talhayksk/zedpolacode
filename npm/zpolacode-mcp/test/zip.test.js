@@ -26,43 +26,43 @@ function isWindows() {
 //
 //   local header   50 4b 03 04 | version 20 | flags 0 | method 0 (stored)
 //                  time 0 date 0 | crc32 0x363a3020 | csize 6 | usize 6
-//                  name len 16 | extra len 0 | "polacode-mcp.exe" | "hello\n"
+//                  name len 17 | extra len 0 | "zpolacode-mcp.exe" | "hello\n"
 //   central entry  50 4b 01 02 | ... same fields + local offset 0
-//   EOCD           50 4b 05 06 | entries 1 | dir size 62 | dir offset 52
+//   EOCD           50 4b 05 06 | entries 1 | dir size 63 | dir offset 53
 //
-// Total: 52 + 62 + 22 = 136 bytes.
+// Total: 53 + 63 + 22 = 138 bytes.
 const STORED_ARCHIVE = Buffer.from([
   // local file header (30)
   0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-  0x20, 0x30, 0x3a, 0x36, 0x06, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x10, 0x00,
+  0x20, 0x30, 0x3a, 0x36, 0x06, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x11, 0x00,
   0x00, 0x00,
-  // name "polacode-mcp.exe" (16)
-  0x70, 0x6f, 0x6c, 0x61, 0x63, 0x6f, 0x64, 0x65, 0x2d, 0x6d, 0x63, 0x70, 0x2e, 0x65,
-  0x78, 0x65,
+  // name "zpolacode-mcp.exe" (17)
+  0x7a, 0x70, 0x6f, 0x6c, 0x61, 0x63, 0x6f, 0x64, 0x65, 0x2d, 0x6d, 0x63, 0x70, 0x2e,
+  0x65, 0x78, 0x65,
   // data "hello\n" (6)
   0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x0a,
-  // central directory entry (46 + 16)
+  // central directory entry (46 + 17)
   0x50, 0x4b, 0x01, 0x02, 0x14, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x20, 0x30, 0x3a, 0x36, 0x06, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
-  0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00,
-  0x70, 0x6f, 0x6c, 0x61, 0x63, 0x6f, 0x64, 0x65, 0x2d, 0x6d, 0x63, 0x70, 0x2e, 0x65,
-  0x78, 0x65,
+  0x7a, 0x70, 0x6f, 0x6c, 0x61, 0x63, 0x6f, 0x64, 0x65, 0x2d, 0x6d, 0x63, 0x70, 0x2e,
+  0x65, 0x78, 0x65,
   // end of central directory (22)
-  0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x3e, 0x00,
-  0x00, 0x00, 0x34, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x3f, 0x00,
+  0x00, 0x00, 0x35, 0x00, 0x00, 0x00, 0x00, 0x00,
 ]);
 
-test('the hand-written stored archive is 136 bytes and is what this reader expects', () => {
-  assert.equal(STORED_ARCHIVE.length, 136);
-  assert.equal(readEntry(STORED_ARCHIVE, 'polacode-mcp.exe').data.toString(), 'hello\n');
+test('the hand-written stored archive is 138 bytes and is what this reader expects', () => {
+  assert.equal(STORED_ARCHIVE.length, 138);
+  assert.equal(readEntry(STORED_ARCHIVE, 'zpolacode-mcp.exe').data.toString(), 'hello\n');
 });
 
 test('extraction writes the stored entry and makes it executable', () => {
   const directory = temporaryDirectory();
-  const target = path.join(directory, 'polacode-mcp.exe');
+  const target = path.join(directory, 'zpolacode-mcp.exe');
 
-  const written = extractToFile(STORED_ARCHIVE, 'polacode-mcp.exe', target);
+  const written = extractToFile(STORED_ARCHIVE, 'zpolacode-mcp.exe', target);
 
   assert.equal(written, 6);
   assert.equal(fs.readFileSync(target, 'utf8'), 'hello\n');
@@ -176,9 +176,9 @@ function buildArchive({
 }
 
 test('extraction inflates a deflated entry whose header the test assembled', () => {
-  const content = Buffer.from('polacode-mcp 0.2.1\n');
+  const content = Buffer.from('zpolacode-mcp 0.2.1\n');
   const archive = buildArchive({
-    name: 'polacode-mcp',
+    name: 'zpolacode-mcp',
     data: zlib.deflateRawSync(content),
     method: 8,
     uncompressedSize: content.length,
@@ -186,8 +186,8 @@ test('extraction inflates a deflated entry whose header the test assembled', () 
   });
 
   const directory = temporaryDirectory();
-  const target = path.join(directory, 'polacode-mcp');
-  extractToFile(archive, 'polacode-mcp', target);
+  const target = path.join(directory, 'zpolacode-mcp');
+  extractToFile(archive, 'zpolacode-mcp', target);
 
   assert.equal(fs.readFileSync(target, 'utf8'), content.toString());
   if (!isWindows()) {
@@ -196,9 +196,9 @@ test('extraction inflates a deflated entry whose header the test assembled', () 
 });
 
 test('an unsupported compression method is rejected by number', () => {
-  const archive = buildArchive({ name: 'polacode-mcp.exe', data: Buffer.from('x'), method: 12 });
+  const archive = buildArchive({ name: 'zpolacode-mcp.exe', data: Buffer.from('x'), method: 12 });
   assert.throws(
-    () => readEntry(archive, 'polacode-mcp.exe'),
+    () => readEntry(archive, 'zpolacode-mcp.exe'),
     /compression method 12.*only stored \(0\) and deflate \(8\)/
   );
 });
@@ -206,9 +206,9 @@ test('an unsupported compression method is rejected by number', () => {
 test('an archive without the expected entry lists what it did contain', () => {
   const archive = buildArchive({ name: 'README.txt', data: Buffer.from('not the binary') });
   assert.throws(
-    () => readEntry(archive, 'polacode-mcp.exe'),
+    () => readEntry(archive, 'zpolacode-mcp.exe'),
     (error) => {
-      assert.match(error.message, /does not contain `polacode-mcp\.exe`/);
+      assert.match(error.message, /does not contain `zpolacode-mcp\.exe`/);
       assert.match(error.message, /entries: README\.txt/);
       return true;
     }
@@ -217,47 +217,47 @@ test('an archive without the expected entry lists what it did contain', () => {
 
 test('a truncated archive is rejected, not partially read', () => {
   const cutTail = STORED_ARCHIVE.subarray(0, STORED_ARCHIVE.length - 30);
-  assert.throws(() => readEntry(cutTail, 'polacode-mcp.exe'), /truncated or not a zip/);
+  assert.throws(() => readEntry(cutTail, 'zpolacode-mcp.exe'), /truncated or not a zip/);
 
   // EOCD intact, entry data cut short: the declared compressed size no longer
   // fits between the local header and the end of the file.
   const shortData = buildArchive({
-    name: 'polacode-mcp.exe',
+    name: 'zpolacode-mcp.exe',
     data: Buffer.from('hello\n'),
     compressedSize: 6 + 32,
     uncompressedSize: 6 + 32,
   });
   assert.throws(
-    () => readEntry(shortData, 'polacode-mcp.exe'),
+    () => readEntry(shortData, 'zpolacode-mcp.exe'),
     /needs 38 bytes but only 6 are available before the central directory/
   );
 });
 
 test('an oversized declared size is rejected before anything is inflated', () => {
   const archive = buildArchive({
-    name: 'polacode-mcp.exe',
+    name: 'zpolacode-mcp.exe',
     data: Buffer.from('hello\n'),
     compressedSize: 6,
     uncompressedSize: MAX_UNCOMPRESSED + 1,
   });
   assert.throws(
-    () => readEntry(archive, 'polacode-mcp.exe'),
+    () => readEntry(archive, 'zpolacode-mcp.exe'),
     new RegExp(`more than the ${MAX_UNCOMPRESSED} byte limit`)
   );
 });
 
 test('zip64 archives are rejected instead of misread', () => {
-  const archive = buildArchive({ name: 'polacode-mcp.exe', data: Buffer.from('x'), entries: 0xffff });
-  assert.throws(() => readEntry(archive, 'polacode-mcp.exe'), /zip64 archives are not supported/);
+  const archive = buildArchive({ name: 'zpolacode-mcp.exe', data: Buffer.from('x'), entries: 0xffff });
+  assert.throws(() => readEntry(archive, 'zpolacode-mcp.exe'), /zip64 archives are not supported/);
 });
 
 test('the atomic write leaves no temporary file behind', () => {
   const directory = temporaryDirectory();
-  const target = path.join(directory, 'nested', 'polacode-mcp.exe');
-  extractToFile(STORED_ARCHIVE, 'polacode-mcp.exe', target);
+  const target = path.join(directory, 'nested', 'zpolacode-mcp.exe');
+  extractToFile(STORED_ARCHIVE, 'zpolacode-mcp.exe', target);
 
   const leftovers = fs
     .readdirSync(path.dirname(target))
-    .filter((entry) => entry !== 'polacode-mcp.exe');
+    .filter((entry) => entry !== 'zpolacode-mcp.exe');
   assert.deepEqual(leftovers, []);
 });

@@ -15,7 +15,7 @@ test('the normal path spawns once with inherited stdio', async () => {
   const calls = [];
   const child = { pid: 1 };
 
-  const result = await spawnBinary('polacode-mcp', ['card'], {
+  const result = await spawnBinary('zpolacode-mcp', ['card'], {
     spawn: (...args) => {
       calls.push(args);
       return child;
@@ -25,7 +25,7 @@ test('the normal path spawns once with inherited stdio', async () => {
 
   assert.equal(result.child, child);
   assert.equal(calls.length, 1);
-  assert.deepEqual(calls[0], ['polacode-mcp', ['card'], { stdio: 'inherit' }]);
+  assert.deepEqual(calls[0], ['zpolacode-mcp', ['card'], { stdio: 'inherit' }]);
 });
 
 test('a transient EPERM is retried and the next start is used', async () => {
@@ -33,7 +33,7 @@ test('a transient EPERM is retried and the next start is used', async () => {
   const waits = [];
   const child = { pid: 2 };
 
-  const result = await spawnBinary('polacode-mcp.exe', [], {
+  const result = await spawnBinary('zpolacode-mcp.exe', [], {
     spawn: () => {
       attempts += 1;
       if (attempts === 1) {
@@ -54,7 +54,7 @@ test('a second transient EPERM uses the next delay', async () => {
   const waits = [];
   const child = { pid: 3 };
 
-  const result = await spawnBinary('polacode-mcp.exe', [], {
+  const result = await spawnBinary('zpolacode-mcp.exe', [], {
     spawn: () => {
       attempts += 1;
       if (attempts <= 2) {
@@ -73,7 +73,7 @@ test('a second transient EPERM uses the next delay', async () => {
 test('a persistent EPERM is reported after the last retry, not looped on', async () => {
   let attempts = 0;
 
-  const result = await spawnBinary('polacode-mcp.exe', [], {
+  const result = await spawnBinary('zpolacode-mcp.exe', [], {
     spawn: () => {
       attempts += 1;
       throw errno('EPERM');
@@ -89,7 +89,7 @@ test('a persistent EPERM is reported after the last retry, not looped on', async
 test('any other failure is reported immediately', async () => {
   let attempts = 0;
 
-  const result = await spawnBinary('polacode-mcp.exe', [], {
+  const result = await spawnBinary('zpolacode-mcp.exe', [], {
     spawn: () => {
       attempts += 1;
       throw errno('ENOENT');
@@ -102,14 +102,14 @@ test('any other failure is reported immediately', async () => {
 });
 
 test('a refused start names the path and tells the user to try again', () => {
-  const message = describeFailure('C:\\cache\\polacode-mcp.exe', errno('EPERM'));
+  const message = describeFailure('C:\\cache\\zpolacode-mcp.exe', errno('EPERM'));
 
-  assert.match(message, /^could not start C:\\cache\\polacode-mcp\.exe: spawn EPERM/);
+  assert.match(message, /^could not start C:\\cache\\zpolacode-mcp\.exe: spawn EPERM/);
   assert.match(message, /Run the command again in a moment/);
 });
 
 test('a non-transient failure carries no retry advice', () => {
-  const message = describeFailure('/usr/local/bin/polacode-mcp', errno('ENOENT'));
+  const message = describeFailure('/usr/local/bin/zpolacode-mcp', errno('ENOENT'));
 
-  assert.equal(message, 'could not start /usr/local/bin/polacode-mcp: spawn ENOENT');
+  assert.equal(message, 'could not start /usr/local/bin/zpolacode-mcp: spawn ENOENT');
 });

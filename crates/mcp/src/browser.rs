@@ -464,7 +464,7 @@ impl TempDir {
             .map(|elapsed| elapsed.as_nanos())
             .unwrap_or(0);
         let path = std::env::temp_dir().join(format!(
-            "polacode-mcp-{}-{}-{}",
+            "zpolacode-mcp-{}-{}-{}",
             std::process::id(),
             nanos,
             COUNTER.fetch_add(1, Ordering::Relaxed)

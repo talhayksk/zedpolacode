@@ -1,7 +1,7 @@
 {
-  "name": "polacode-mcp",
-  "version": "0.2.1",
-  "description": "PNG code cards and an MCP stdio server. Installs the polacode-mcp binary.",
+  "name": "zpolacode-mcp",
+  "version": "0.3.0",
+  "description": "PNG code cards and the Zed Polacode MCP stdio server. Installs the zpolacode-mcp binary.",
   "license": "MIT",
   "author": "Talha Yüksek",
   "repository": {
@@ -12,9 +12,9 @@
   "bugs": {
     "url": "https://github.com/talhayksk/zedpolacode/issues"
   },
-  "mcpName": "io.github.talhayksk/polacode",
+  "mcpName": "io.github.talhayksk/zpolacode",
   "bin": {
-    "polacode-mcp": "bin/polacode-mcp.js"
+    "zpolacode-mcp": "bin/zpolacode-mcp.js"
   },
   "files": [
     "bin",
@@ -33,6 +33,7 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "zed",
     "polacode",
     "code-screenshot",
     "png",

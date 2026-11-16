@@ -22,7 +22,7 @@ function tripleFor(platform = process.platform, arch = process.arch) {
   const triple = TRIPLES[`${platform}-${arch}`];
   if (!triple) {
     throw new Error(
-      `polacode-mcp has no build for ${platform}-${arch}. ` +
+      `zpolacode-mcp has no build for ${platform}-${arch}. ` +
         `Supported platforms: ${SUPPORTED.join(', ')}.`
     );
   }
@@ -31,7 +31,7 @@ function tripleFor(platform = process.platform, arch = process.arch) {
 
 /** The file name inside the release zip for this platform. */
 function binaryName(platform = process.platform) {
-  return platform === 'win32' ? 'polacode-mcp.exe' : 'polacode-mcp';
+  return platform === 'win32' ? 'zpolacode-mcp.exe' : 'zpolacode-mcp';
 }
 
 module.exports = { TRIPLES, SUPPORTED, tripleFor, binaryName };

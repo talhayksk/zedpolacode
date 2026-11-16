@@ -40,7 +40,7 @@ test('an unsupported pair names the pair and the supported list', () => {
 });
 
 test('the binary name follows the platform', () => {
-  assert.equal(binaryName('win32'), 'polacode-mcp.exe');
-  assert.equal(binaryName('linux'), 'polacode-mcp');
-  assert.equal(binaryName('darwin'), 'polacode-mcp');
+  assert.equal(binaryName('win32'), 'zpolacode-mcp.exe');
+  assert.equal(binaryName('linux'), 'zpolacode-mcp');
+  assert.equal(binaryName('darwin'), 'zpolacode-mcp');
 });

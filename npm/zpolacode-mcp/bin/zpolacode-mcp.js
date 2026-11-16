@@ -3,7 +3,7 @@
 
 // The npm entry point: make sure the platform binary is on disk, then become
 // it. With no arguments the binary is the MCP stdio server, so
-// `npx -y polacode-mcp` is a complete server command for any MCP client.
+// `npx -y zpolacode-mcp` is a complete server command for any MCP client.
 
 const path = require('node:path');
 
@@ -12,13 +12,13 @@ const { spawnBinary, describeFailure } = require('../lib/spawn-binary');
 
 const SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
 
-// A `.js` target is only reachable through POLACODE_MCP_BINARY (the released
+// A `.js` target is only reachable through ZPOLACODE_MCP_BINARY (the released
 // binary is an ELF/Mach-O/PE file). Running it with this same Node keeps a
 // script shim usable on every platform.
 const NODE_SCRIPT = new Set(['.js', '.cjs', '.mjs']);
 
 function reportSpawnFailure(binary, error) {
-  process.stderr.write(`polacode-mcp: ${describeFailure(binary, error)}\n`);
+  process.stderr.write(`zpolacode-mcp: ${describeFailure(binary, error)}\n`);
   process.exitCode = 1;
 }
 
@@ -29,7 +29,7 @@ async function main() {
   try {
     binary = await ensureBinary();
   } catch (error) {
-    process.stderr.write(`polacode-mcp: ${error.message}\n`);
+    process.stderr.write(`zpolacode-mcp: ${error.message}\n`);
     process.exitCode = 1;
     return;
   }

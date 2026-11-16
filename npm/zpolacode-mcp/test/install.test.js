@@ -30,15 +30,15 @@ function fakeDownloader(counter = { calls: 0 }) {
 test('the asset URL is the release contract for this package version', () => {
   assert.equal(
     assetUrl(version, 'x86_64-pc-windows-msvc'),
-    `https://github.com/talhayksk/zedpolacode/releases/download/mcp-v${version}/polacode-mcp-x86_64-pc-windows-msvc.zip`
+    `https://github.com/talhayksk/zedpolacode/releases/download/mcp-v${version}/zpolacode-mcp-x86_64-pc-windows-msvc.zip`
   );
   assert.match(version, /^\d+\.\d+\.\d+$/);
 });
 
 test('the cache lives under the version and the triple', () => {
-  const home = path.join(os.homedir(), '.polacode-mcp');
+  const home = path.join(os.homedir(), '.zpolacode-mcp');
   assert.equal(cacheRoot({}), home);
-  assert.equal(cacheRoot({ POLACODE_MCP_CACHE_DIR: path.join('some', 'where') }), path.resolve('some', 'where'));
+  assert.equal(cacheRoot({ ZPOLACODE_MCP_CACHE_DIR: path.join('some', 'where') }), path.resolve('some', 'where'));
   assert.equal(
     cacheDir({ version: '1.2.3', triple: 'x86_64-unknown-linux-gnu', env: {} }),
     path.join(home, '1.2.3', 'x86_64-unknown-linux-gnu')
@@ -47,7 +47,7 @@ test('the cache lives under the version and the triple', () => {
 
 test('a cached binary is reused and never downloaded twice', async () => {
   const root = temporaryDirectory();
-  const env = { POLACODE_MCP_CACHE_DIR: root };
+  const env = { ZPOLACODE_MCP_CACHE_DIR: root };
   const counter = { calls: 0 };
   const download = fakeDownloader(counter);
 
@@ -68,7 +68,7 @@ test('the downloader is told the version, the triple and the cache directory', a
     await fakeDownloader()(request);
   };
 
-  await ensureBinary({ env: { POLACODE_MCP_CACHE_DIR: root }, download });
+  await ensureBinary({ env: { ZPOLACODE_MCP_CACHE_DIR: root }, download });
 
   assert.equal(seen.length, 1);
   assert.equal(seen[0].version, version);
@@ -77,13 +77,13 @@ test('the downloader is told the version, the triple and the cache directory', a
   assert.equal(seen[0].url, assetUrl(version, tripleFor()));
 });
 
-test('POLACODE_MCP_BINARY skips both the cache and the download', async () => {
+test('ZPOLACODE_MCP_BINARY skips both the cache and the download', async () => {
   const pinned = path.join(temporaryDirectory(), 'shim.js');
   fs.writeFileSync(pinned, '// stand-in');
 
   let calls = 0;
   const binary = await ensureBinary({
-    env: { POLACODE_MCP_BINARY: pinned },
+    env: { ZPOLACODE_MCP_BINARY: pinned },
     download: async () => {
       calls += 1;
     },
@@ -93,16 +93,16 @@ test('POLACODE_MCP_BINARY skips both the cache and the download', async () => {
   assert.equal(calls, 0);
 });
 
-test('POLACODE_MCP_BINARY pointing at nothing is an error naming the variable', async () => {
+test('ZPOLACODE_MCP_BINARY pointing at nothing is an error naming the variable', async () => {
   await assert.rejects(
-    ensureBinary({ env: { POLACODE_MCP_BINARY: path.join(temporaryDirectory(), 'gone') }, download: async () => {} }),
-    /POLACODE_MCP_BINARY points at .* which does not exist/
+    ensureBinary({ env: { ZPOLACODE_MCP_BINARY: path.join(temporaryDirectory(), 'gone') }, download: async () => {} }),
+    /ZPOLACODE_MCP_BINARY points at .* which does not exist/
   );
 });
 
 test('a downloader that writes nothing is caught before the binary is run', async () => {
   await assert.rejects(
-    ensureBinary({ env: { POLACODE_MCP_CACHE_DIR: temporaryDirectory() }, download: async () => {} }),
+    ensureBinary({ env: { ZPOLACODE_MCP_CACHE_DIR: temporaryDirectory() }, download: async () => {} }),
     /Nothing runnable at .* after the download/
   );
 });
@@ -110,7 +110,7 @@ test('a downloader that writes nothing is caught before the binary is run', asyn
 test('a downloader that fails surfaces its own reason', async () => {
   await assert.rejects(
     ensureBinary({
-      env: { POLACODE_MCP_CACHE_DIR: temporaryDirectory() },
+      env: { ZPOLACODE_MCP_CACHE_DIR: temporaryDirectory() },
       download: async () => {
         throw new Error('Download failed: HTTP 404 from https://example.invalid/x.zip.');
       },
@@ -126,7 +126,7 @@ test('an empty cached file is not treated as installed', async () => {
   fs.writeFileSync(path.join(dir, binaryName()), '');
 
   const counter = { calls: 0 };
-  await ensureBinary({ env: { POLACODE_MCP_CACHE_DIR: root }, download: fakeDownloader(counter) });
+  await ensureBinary({ env: { ZPOLACODE_MCP_CACHE_DIR: root }, download: fakeDownloader(counter) });
 
   assert.equal(counter.calls, 1);
 });

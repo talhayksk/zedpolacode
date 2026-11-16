@@ -1,4 +1,4 @@
-//! Integration tests for the `polacode-mcp` stdio transport.
+//! Integration tests for the `zpolacode-mcp` stdio transport.
 //!
 //! Every test here spawns the real binary and talks to it over pipes, so the
 //! assertions describe exactly what a client sees: one JSON object per line on
@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 use serde_json::{json, Value};
 
 /// Cargo builds the binary before it runs integration tests.
-const BIN: &str = env!("CARGO_BIN_EXE_polacode-mcp");
+const BIN: &str = env!("CARGO_BIN_EXE_zpolacode-mcp");
 
 /// Generous per-session budget. Nothing here should take a second; a value this
 /// large only exists so a regression fails instead of hanging the suite.
@@ -178,7 +178,7 @@ fn initialize_echoes_the_client_protocol_version() {
         response[0]["result"]["capabilities"],
         json!({ "tools": {} })
     );
-    assert_eq!(response[0]["result"]["serverInfo"]["name"], "polacode-mcp");
+    assert_eq!(response[0]["result"]["serverInfo"]["name"], "zpolacode-mcp");
     assert_eq!(
         response[0]["result"]["serverInfo"]["version"],
         env!("CARGO_PKG_VERSION")
@@ -716,7 +716,7 @@ fn server_temp_dirs() -> std::collections::HashSet<std::path::PathBuf> {
     for entry in entries.flatten() {
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if name.starts_with("polacode-mcp-") {
+        if name.starts_with("zpolacode-mcp-") {
             found.insert(entry.path());
         }
     }

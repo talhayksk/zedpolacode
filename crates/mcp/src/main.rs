@@ -1,4 +1,4 @@
-//! `polacode-mcp` — an MCP stdio server that turns code into a PNG code card.
+//! `zpolacode-mcp` — an MCP stdio server that turns code into a PNG code card.
 //!
 //! With no arguments it is the stdio server: stdout carries JSON-RPC and nothing
 //! else, one JSON object per line, flushed after every message, and every
@@ -29,7 +29,7 @@ fn main() {
     let args = match collect_arguments() {
         Ok(args) => args,
         Err(message) => {
-            eprintln!("polacode-mcp: {message}");
+            eprintln!("zpolacode-mcp: {message}");
             std::process::exit(cli::EXIT_USAGE);
         }
     };
@@ -73,7 +73,7 @@ fn run_server() {
         let line = match line {
             Ok(line) => line,
             Err(error) => {
-                eprintln!("polacode-mcp: could not read stdin: {error}");
+                eprintln!("zpolacode-mcp: could not read stdin: {error}");
                 break;
             }
         };
@@ -89,13 +89,13 @@ fn run_server() {
         let text = match serde_json::to_string(&response) {
             Ok(text) => text,
             Err(error) => {
-                eprintln!("polacode-mcp: could not encode a response: {error}");
+                eprintln!("zpolacode-mcp: could not encode a response: {error}");
                 continue;
             }
         };
 
         if let Err(error) = write_message(&mut out, &text) {
-            eprintln!("polacode-mcp: could not write to stdout: {error}");
+            eprintln!("zpolacode-mcp: could not write to stdout: {error}");
             return;
         }
     }

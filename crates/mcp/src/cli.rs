@@ -1,12 +1,12 @@
 //! The `card` command: a second entry point in the same binary.
 //!
-//! With no arguments `polacode-mcp` is the stdio server, unchanged. With
+//! With no arguments `zpolacode-mcp` is the stdio server, unchanged. With
 //! arguments it is a small CLI that turns the clipboard (or a file) into a PNG
 //! without a model in the loop:
 //!
 //! ```text
-//! polacode-mcp card --clipboard --lang Rust --title demo.rs
-//! polacode-mcp card --file src/main.rs --lines 10-24
+//! zpolacode-mcp card --clipboard --lang Rust --title demo.rs
+//! zpolacode-mcp card --file src/main.rs --lines 10-24
 //! ```
 //!
 //! Clipboard text is read from the operating system, never interpolated into a
@@ -195,7 +195,7 @@ impl CardArgs {
 fn parse(argv: &[String]) -> Result<Invocation, CliError> {
     let Some(first) = argv.first() else {
         return Err(CliError::usage(
-            "No command. Run `polacode-mcp --help` for usage.",
+            "No command. Run `zpolacode-mcp --help` for usage.",
         ));
     };
 
@@ -205,7 +205,7 @@ fn parse(argv: &[String]) -> Result<Invocation, CliError> {
         "card" => {}
         other => {
             return Err(CliError::usage(format!(
-                "Unknown command `{other}`. Run `polacode-mcp --help` for usage."
+                "Unknown command `{other}`. Run `zpolacode-mcp --help` for usage."
             )))
         }
     }
@@ -251,12 +251,12 @@ fn parse(argv: &[String]) -> Result<Invocation, CliError> {
             "--out" => out = Some(take_value("--out", argv, &mut index)?),
             "--open" => open = true,
             "--json" => json = true,
-            // `card --help` is the usage text, exactly like `polacode-mcp
+            // `card --help` is the usage text, exactly like `zpolacode-mcp
             // --help`: the command reported an unknown option before.
             "--help" | "-h" => return Ok(Invocation::Help),
             other => {
                 return Err(CliError::usage(format!(
-                    "Unknown option `{other}`. Run `polacode-mcp --help` for usage."
+                    "Unknown option `{other}`. Run `zpolacode-mcp --help` for usage."
                 )))
             }
         }
@@ -308,7 +308,7 @@ fn take_value(flag: &str, argv: &[String], index: &mut usize) -> Result<String, 
     match argv.get(*index) {
         Some(value) if !value.starts_with("--") => Ok(value.clone()),
         _ => Err(CliError::usage(format!(
-            "`{flag}` needs a value. Run `polacode-mcp --help` for usage."
+            "`{flag}` needs a value. Run `zpolacode-mcp --help` for usage."
         ))),
     }
 }
@@ -510,7 +510,7 @@ fn open_in_viewer(path: &Path) -> Result<(), String> {
 /// Windows), and a memory-mapped file cannot be rewritten
 /// (`ERROR_USER_MAPPED_FILE`, os error 1224). The project file must therefore
 /// never be the file the viewer holds.
-const VIEWER_DIR: &str = "polacode-mcp-viewer";
+const VIEWER_DIR: &str = "zpolacode-mcp-viewer";
 
 /// How many copies of one card base a viewer may hold at once. A new snapshot
 /// reuses the first copy the viewer has closed; when every slot is still held
@@ -520,7 +520,7 @@ const VIEWER_SLOTS: u32 = 16;
 /// Copies `source` to a path the viewer can hold open without touching the
 /// project file, and returns it.
 ///
-/// The copy goes to `<temp>/polacode-mcp-viewer/<base>-<slot>.png`, slot 1
+/// The copy goes to `<temp>/zpolacode-mcp-viewer/<base>-<slot>.png`, slot 1
 /// first. A copy the viewer has closed is deleted and reused, so the common
 /// case keeps one file per card; a copy it still holds cannot be deleted or
 /// overwritten, and the next slot is tried. All [`VIEWER_SLOTS`] slots held at
@@ -555,7 +555,7 @@ fn viewer_copy(source: &Path) -> Result<PathBuf, String> {
 }
 
 fn report_error(error: &CliError) -> i32 {
-    eprintln!("polacode-mcp: {}", error.message);
+    eprintln!("zpolacode-mcp: {}", error.message);
     error.exit_code()
 }
 
@@ -577,12 +577,12 @@ fn run_card(
             match viewer_copy(path) {
                 Ok(copy) => {
                     if let Err(message) = viewer.open(&copy) {
-                        eprintln!("polacode-mcp: {message}");
+                        eprintln!("zpolacode-mcp: {message}");
                     }
                 }
                 Err(message) => {
                     eprintln!(
-                        "polacode-mcp: {message}; the PNG is at `{}`.",
+                        "zpolacode-mcp: {message}; the PNG is at `{}`.",
                         path.display()
                     );
                 }
@@ -594,7 +594,7 @@ fn run_card(
         match serde_json::to_string(&executed.json()) {
             Ok(text) => println!("{text}"),
             Err(error) => {
-                eprintln!("polacode-mcp: could not encode the summary: {error}");
+                eprintln!("zpolacode-mcp: could not encode the summary: {error}");
                 return EXIT_RUNTIME;
             }
         }
@@ -606,23 +606,23 @@ fn run_card(
 }
 
 fn version_line() -> String {
-    format!("polacode-mcp {}", env!("CARGO_PKG_VERSION"))
+    format!("zpolacode-mcp {}", env!("CARGO_PKG_VERSION"))
 }
 
 fn help_text() -> String {
     format!(
-        r#"polacode-mcp {version} - turn code into a PNG code card.
+        r#"zpolacode-mcp {version} - turn code into a PNG code card.
 
 With no arguments this binary is the MCP stdio server: one JSON-RPC object per
 line on stdout. With `card` it is a small command-line tool that renders the
 same card without a model in the loop.
 
 Usage:
-  polacode-mcp card --clipboard [options]
-  polacode-mcp card --file <path> [--lines <range>] [options]
-  polacode-mcp card --help
-  polacode-mcp --help
-  polacode-mcp --version
+  zpolacode-mcp card --clipboard [options]
+  zpolacode-mcp card --file <path> [--lines <range>] [options]
+  zpolacode-mcp card --help
+  zpolacode-mcp --help
+  zpolacode-mcp --version
 
 Source (exactly one):
   --clipboard              Read the code from the OS clipboard. Select the code
