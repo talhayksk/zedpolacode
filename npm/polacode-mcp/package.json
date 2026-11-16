@@ -1,0 +1,41 @@
+{
+  "name": "polacode-mcp",
+  "version": "0.2.1",
+  "description": "PNG code cards and an MCP stdio server. Installs the polacode-mcp binary.",
+  "license": "MIT",
+  "author": "Talha Yüksek",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/talhayksk/zedpolacode"
+  },
+  "homepage": "https://github.com/talhayksk/zedpolacode",
+  "bugs": {
+    "url": "https://github.com/talhayksk/zedpolacode/issues"
+  },
+  "mcpName": "io.github.talhayksk/polacode",
+  "bin": {
+    "polacode-mcp": "bin/polacode-mcp.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "polacode",
+    "code-screenshot",
+    "png",
+    "cli"
+  ]
+}
