@@ -1,0 +1,270 @@
+name: Release polacode-mcp
+
+# Binary release train for the MCP server. Separate from the extension's v* tags.
+#
+# CONTRACT (the thin Zed extension, Phase 3, is written against this — do not rename):
+#   https://github.com/talhayksk/zedpolacode/releases/download/mcp-v<version>/polacode-mcp-<target>.zip
+#   <version>  = the `version` field of crates/mcp/Cargo.toml (0.1.0 today)
+#   zip root   = exactly one file: polacode-mcp.exe on Windows, polacode-mcp elsewhere
+#   release    = those five zips plus sha256sums.txt at the release root
+#
+# Tag push  mcp-v<version>  -> build, package, publish a GitHub Release.
+# Dispatch                  -> build and package only, no release (dry run).
+
+on:
+  push:
+    tags:
+      - "mcp-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-mcp-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  MCP_MANIFEST: crates/mcp/Cargo.toml
+
+jobs:
+  # A tag that disagrees with the crate version would publish a mislabelled release,
+  # so this runs before anything is built and fails fast.
+  version:
+    name: Tag matches crate version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare mcp-v<tag> with crates/mcp/Cargo.toml
+        id: check
+        shell: bash
+        run: |
+          set -eu
+          version=$(sed -nE 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$MCP_MANIFEST" | head -n1)
+          if [ -z "$version" ]; then
+            echo "::error::No version field found in $MCP_MANIFEST"
+            exit 1
+          fi
+          echo "crate version: $version"
+
+          case "$GITHUB_REF" in
+            refs/tags/*)
+              tag="$GITHUB_REF_NAME"
+              case "$tag" in
+                mcp-v*) tagged="${tag#mcp-v}" ;;
+                *)
+                  echo "::error::Tag '$tag' does not match mcp-v<version>."
+                  exit 1
+                  ;;
+              esac
+              if [ "$tagged" != "$version" ]; then
+                echo "::error::Tag '$tag' says $tagged but $MCP_MANIFEST says $version. Bump the crate, then tag."
+                exit 1
+              fi
+              echo "OK: $tag matches $version"
+              ;;
+            *)
+              echo "Dry run on $GITHUB_REF: no tag to compare, crate version is $version."
+              ;;
+          esac
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  # The suite is browser-free, so this is a plain cargo run.
+  test:
+    name: Format and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: cargo fmt --check
+        run: cargo fmt --check
+
+      - name: cargo test -p polacode-mcp
+        run: cargo test --locked -p polacode-mcp
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: [version, test]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # target triple, pinned runner, and whether that runner can execute the result
+          - target: x86_64-pc-windows-msvc
+            os: windows-2022
+            smoke: true
+          - target: x86_64-apple-darwin
+            os: macos-15-intel
+            smoke: true
+          - target: aarch64-apple-darwin
+            os: macos-15
+            smoke: true
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+            smoke: true
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04
+            smoke: false # cross-compiled on x64; cannot be executed on this runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # Only aarch64 Linux is cross-compiled: rustc emits the object code, the
+      # system cross-gcc links it. Without the linker variable the build stops at link time.
+      - name: Wire the aarch64 Linux linker
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+
+      - name: cargo build
+        run: cargo build --locked -p polacode-mcp --release --target ${{ matrix.target }}
+
+      # The binary is a stdio server: it blocks on stdin, so feed it one ping line.
+      - name: Smoke test the binary
+        if: matrix.smoke
+        shell: bash
+        run: |
+          set -eu
+          bin="target/${{ matrix.target }}/release/polacode-mcp"
+          if [ "${{ runner.os }}" = "Windows" ]; then bin="$bin.exe"; fi
+          out=$(printf '{"jsonrpc":"2.0","id":1,"method":"ping"}\n' | "$bin")
+          echo "reply: $out"
+          case "$out" in
+            *'"result":{}'*) echo "ping answered" ;;
+            *)
+              echo "::error::polacode-mcp did not answer ping"
+              exit 1
+              ;;
+          esac
+
+      # Cross-compiled, so it cannot be executed here. At least prove the linker
+      # produced an aarch64 object and not an x86 one.
+      - name: Verify the cross-compiled binary is aarch64
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          set -eu
+          file "target/${{ matrix.target }}/release/polacode-mcp"
+          file "target/${{ matrix.target }}/release/polacode-mcp" | grep -qi 'aarch64'
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $zip = "polacode-mcp-${{ matrix.target }}.zip"
+          Compress-Archive -Path "target/${{ matrix.target }}/release/polacode-mcp.exe" -DestinationPath $zip -Force
+          # One "<hash>  <name>" line, LF-terminated, so the aggregated
+          # sha256sums.txt verifies with `sha256sum -c` on Linux and macOS.
+          $hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()
+          [IO.File]::WriteAllText("$zip.sha256", "$hash  $zip`n", (New-Object Text.UTF8Encoding $false))
+          Write-Host "sha256 $hash"
+
+      - name: Package (Linux and macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -eu
+          zip="polacode-mcp-${{ matrix.target }}.zip"
+          out="$PWD/$zip"
+          (cd "target/${{ matrix.target }}/release" && zip -q "$out" polacode-mcp)
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "$zip" > "$zip.sha256"
+          else
+            shasum -a 256 "$zip" > "$zip.sha256" # macOS
+          fi
+          cat "$zip.sha256"
+
+      # The extension unpacks a fixed relative name, so the layout is part of the contract.
+      - name: Verify archive layout (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path "polacode-mcp-${{ matrix.target }}.zip").Path)
+          try { $names = @($zip.Entries | ForEach-Object FullName) } finally { $zip.Dispose() }
+          Write-Host "entries: $($names -join ', ')"
+          if ($names.Count -ne 1 -or $names[0] -ne 'polacode-mcp.exe') {
+            throw "The zip must contain exactly polacode-mcp.exe at its root."
+          }
+
+      - name: Verify archive layout (Linux and macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -eu
+          names=$(unzip -Z1 "polacode-mcp-${{ matrix.target }}.zip")
+          echo "entries: $names"
+          if [ "$names" != "polacode-mcp" ]; then
+            echo "::error::The zip must contain exactly polacode-mcp at its root."
+            exit 1
+          fi
+
+      - name: Keep the artefact for the release job
+        uses: actions/upload-artifact@v4
+        with:
+          name: polacode-mcp-${{ matrix.target }}
+          path: |
+            polacode-mcp-${{ matrix.target }}.zip
+            polacode-mcp-${{ matrix.target }}.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    needs: [version, build]
+    if: startsWith(github.ref, 'refs/tags/mcp-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # only this job needs to write: it creates the release
+    steps:
+      - name: Collect the five archives
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Aggregate and verify sha256sums.txt
+        shell: bash
+        run: |
+          set -eu
+          cd dist
+          ls -l .
+          if [ "$(ls -1 ./*.zip | wc -l)" -ne 5 ]; then
+            echo "::error::Expected five archives, found $(ls -1 ./*.zip | wc -l)."
+            exit 1
+          fi
+          # sed: strips a possible CR and guarantees one LF per entry, so the file
+          # is readable by `sha256sum -c` on any platform.
+          sed -e 's/\r$//' ./*.sha256 > sha256sums.txt
+          sha256sum -c sha256sums.txt
+          cat sha256sums.txt
+
+      # softprops/action-gh-release rather than `gh release create`:
+      # one declarative step for notes + asset upload, and fail_on_unmatched_files
+      # turns a missing artefact into a red job instead of a silent half release.
+      - name: Create the release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: polacode-mcp v${{ needs.version.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.zip
+            dist/sha256sums.txt
