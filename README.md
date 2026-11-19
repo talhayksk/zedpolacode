@@ -1,3 +1,5 @@
+[![Zed Polacode MCP server](https://mcprush.com/badge/zed-polacode-mcp/card.svg)](https://mcprush.com/to/zed-polacode-mcp?ref=badge)
+
 # Zed Polacode
 
 [![CI](https://github.com/talhayksk/zedpolacode/actions/workflows/ci.yml/badge.svg)](https://github.com/talhayksk/zedpolacode/actions/workflows/ci.yml)
